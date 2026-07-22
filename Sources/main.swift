@@ -8,6 +8,31 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 }
 
+// Version comes from the bundle, so Info.plist stays the one place it is written down.
+if CommandLine.arguments.contains("--version") {
+    let info = Bundle.main.infoDictionary
+    let version = info?["CFBundleShortVersionString"] as? String ?? "unknown"
+    let build = info?["CFBundleVersion"] as? String ?? "0"
+    print("Agentique \(version) (\(build))")
+    exit(0)
+}
+
+if CommandLine.arguments.contains("--help") || CommandLine.arguments.contains("-h") {
+    print("""
+        Agentique—a macOS menu bar status item for cmux agent state.
+
+        usage: Agentique [--dump | --preview <path> | --version | --help]
+
+        Runs as a menu bar item when given no options.
+
+          --dump            print the row's state mapping as text
+          --preview <path>  render the row to a PNG over both menu bar backgrounds
+          --version         print the version
+          --help, -h        print this message
+        """)
+    exit(0)
+}
+
 // `--dump` prints the row the app would draw, for checking state mapping headlessly.
 if CommandLine.arguments.contains("--dump") {
     let sessions = CmuxBridge.liveSessions()
