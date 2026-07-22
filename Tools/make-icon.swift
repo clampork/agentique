@@ -2,7 +2,7 @@
 import AppKit
 
 // Renders Assets/AppIcon.icns — a row of colored dots on a dark squircle. Deliberately
-// abstract: the dots read as "a row of things" without committing to any one mark, and
+// abstract: the dots read as "a row of things" without committing to any one glyph, and
 // stay legible down to 16pt where detailed artwork would not.
 //
 //   swift Tools/make-icon.swift

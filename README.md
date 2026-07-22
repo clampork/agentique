@@ -1,72 +1,74 @@
-# Agentique
+<h1 align="center">Agentique</h1>
 
-One mark per [cmux](https://www.cmux.dev/) workspace in the macOS menu bar, colored by
-project and animated by what its coding agent is doing.
+<p align="center">
+  <img src="docs/pulse.png" width="334" alt="A row of colored glyphs; two pulse while their agents work.">
+</p>
 
-[![CI](https://github.com/clampork/agentique/actions/workflows/ci.yml/badge.svg)](https://github.com/clampork/agentique/actions/workflows/ci.yml)
-[![Latest release](https://img.shields.io/github/v/release/clampork/agentique?sort=semver)](https://github.com/clampork/agentique/releases/latest)
-[![License](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
-![Platform](https://img.shields.io/badge/platform-macOS%2014%2B%20Apple%20Silicon-lightgrey)
+<p align="center">
+  One glyph per <a href="https://www.cmux.dev/">cmux</a> Workspace in the macOS menu bar,
+  colored by project and animated by what its agent is doing.
+</p>
 
-<img src="docs/pulse.gif" width="382" alt="A row of marks in the menu bar; two pulse while their agents work.">
+<p align="center">
+  <a href="https://github.com/clampork/agentique/actions/workflows/ci.yml"><img src="https://github.com/clampork/agentique/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/clampork/agentique/releases/latest"><img src="https://img.shields.io/github/v/release/clampork/agentique?sort=semver" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
+  <img src="https://img.shields.io/badge/platform-macOS%2014%2B%20Apple%20Silicon-lightgrey" alt="Platform">
+</p>
 
-Running several coding agents at once means one of them is always finishing while you are
-looking at something else. Agentique puts the whole set in the menu bar: which projects
-have an agent, which are mid-turn, and which finished while your back was turned.
+## Why
 
-## What the marks mean
+The menu bar is the one strip of screen no window covers. Agentique puts your agents
+there, so cmux can sit behind your editor or your browser while you work. A glance tells
+you which Workspaces are still thinking and which one has stopped and is waiting on you;
+clicking its glyph drops you straight into that Workspace.
 
-<img src="docs/states.png" width="486" alt="Mid-turn marks pulse between 35% and full brightness; a finished but unseen mark holds at full; a seen one settles to 70%.">
+## What the glyphs mean
 
-Color is identity, never state. Every mark is drawn in its workspace's cmux color, so a
-busy project stays recognizable as *that* project. State rides on brightness and motion
-instead:
+Color is identity, never state. Every glyph is drawn in its Workspace's cmux color, so a
+busy project stays recognizable as *that* project. State rides on brightness and motion:
 
 | Condition | Treatment |
 | --- | --- |
-| Agent mid-turn | pulsing, 35% to full, over 1.4s |
-| Turn finished, not yet seen | full brightness, static |
-| Turn finished, already visited | 70%, static |
-| Plain terminal, no AI ever loaded | hidden entirely |
+| Agent mid-turn | pulsing |
+| Turn finished, not yet seen | full brightness |
+| Turn finished, already visited | dimmed |
+| Plain terminal, no agent ever loaded | hidden |
 
-Marks are dimmed by color rather than opacity, so a resting mark is a darker shade of
-itself at full opacity instead of a translucent one that blends into the bar behind it.
+Glyphs dim by color rather than opacity, so a resting one is a darker shade of itself
+instead of a translucent one bleeding into the bar behind it.
 
 ## Requirements
 
-- **macOS 14 Sonoma or later.** Agentique itself builds against macOS 13, but cmux
-  requires 14, so 14 is the real floor.
-- **Apple Silicon.** The build targets `arm64` only.
-- **[cmux](https://www.cmux.dev/)**, with at least one workspace.
-- **Xcode Command Line Tools**, for the Swift compiler. Full Xcode works but is not
-  needed.
+- **macOS 14 or later.** Agentique builds against 13, but cmux needs 14.
+- **Apple Silicon.** The build targets `arm64`.
+- **[cmux](https://www.cmux.dev/)**, with at least one Workspace.
+- **Xcode Command Line Tools**, for the Swift compiler. Full Xcode also works.
 
 ## Install
 
-There is no prebuilt download, because distributing a macOS app that opens without a
-Gatekeeper warning requires a paid Apple Developer ID. Building it yourself takes a few
-seconds and sidesteps that entirely.
+There is no prebuilt download: shipping a macOS app that opens without a Gatekeeper
+warning needs a paid Apple Developer ID. Building it yourself takes seconds and avoids
+that.
 
 ```sh
-xcode-select --install        # skip if you already have them
-brew install --cask cmux      # skip if cmux is already installed
+xcode-select --install        # skip if you have them
+brew install --cask cmux      # skip if you have it
 
 git clone https://github.com/clampork/agentique.git
 cd agentique
 ./build.sh install
 ```
 
-`./build.sh install` compiles the app, copies it to `/Applications`, and registers a
-launch agent so it starts at login and restarts if it ever exits.
-
-Then grant it socket access, below. Without that step the row comes up empty.
+That compiles the app, copies it to `/Applications`, and registers a launch agent so it
+starts at login. Then grant socket access, or the row comes up empty.
 
 ### Granting cmux socket access
 
 cmux defaults `automation.socketControlMode` to `cmuxOnly`, which admits only processes
 started inside cmux. Agentique runs from `/Applications` under launchd, so it is refused
-with `Access denied - only processes started inside cmux can connect` and draws nothing.
-Add this to `~/.config/cmux/cmux.json`:
+with `Access denied - only processes started inside cmux can connect`. Add to
+`~/.config/cmux/cmux.json`:
 
 ```json
 {
@@ -74,29 +76,23 @@ Add this to `~/.config/cmux/cmux.json`:
 }
 ```
 
-then reload:
+then run `cmux reload-config`.
 
-```sh
-cmux reload-config
-```
-
-`allowAll` lets any local process drive cmux. If that is too broad, `password` mode plus
-`--password` on each call is the narrower alternative, though Agentique does not yet pass
-one.
+`allowAll` lets any local process drive cmux. `password` mode is the narrower option,
+though Agentique does not yet pass one.
 
 ### Checking it worked
 
-Marks should appear in the menu bar within a couple of seconds. If the row is empty:
+Glyphs should appear within a couple of seconds. If the row is empty:
 
 ```sh
 /Applications/Agentique.app/Contents/MacOS/Agentique --dump
 ```
 
-This prints the row as text. Note the catch: anything launched from a cmux terminal
-inherits socket access regardless of `socketControlMode`, so running `--dump` from a cmux
-shell can succeed while the installed app is still being refused. To tell those cases
-apart, check `~/Library/Logs/Agentique.log`, which records the slot count and the status
-item's placement once per launch.
+Mind the catch: anything launched from a cmux terminal inherits socket access whatever
+`socketControlMode` says, so `--dump` can succeed in a cmux shell while the installed app
+is still refused. `~/Library/Logs/Agentique.log` records the glyph count once per launch,
+which tells the two apart.
 
 ### Uninstalling
 
@@ -104,31 +100,27 @@ item's placement once per launch.
 ./build.sh uninstall
 ```
 
-Removes the app, the launch agent, and stops the running copy.
-
 ## Using it
 
-Click a mark to jump straight to that workspace. Click the padding around the marks, or
-right-click anywhere on the item, to open the workspace list instead. The status item has
-no attached menu on purpose, since that would make every click open the list.
+Click a glyph to jump to its Workspace. Click the padding around them, or right-click
+anywhere on the item, for the Workspace list. The status item has no attached menu on
+purpose, since that would make every click open the list.
 
 ## Custom agent artwork
 
-Drop `Assets/agents/<agent>.<ext>` and rebuild. `pdf`, `svg` and `png` are resolved in
-that order, and the name matches the agent key cmux uses: `claude`, `codex`, plus
-`fallback` for anything else cmux integrates with. Missing artwork falls back to a filled
-circle.
+Drop `Assets/agents/<agent>.<ext>` and rebuild. `pdf`, `svg` and `png` resolve in that
+order, and the name matches the agent key cmux uses: `claude`, `codex`, plus `fallback`
+for anything else. Missing artwork falls back to a filled circle.
 
 **Design at 256px tall, up to 460px wide, exported as SVG.** Height is the only fixed
-dimension: every mark is scaled to `markSize` and its width follows its aspect ratio. Past
-1.8:1 a mark is fitted by width instead and ends up shorter than its neighbours.
-Transparent margins are trimmed at load, so padding is irrelevant, but the *content*
-bounding box sets the aspect ratio, so a stray pixel resizes the whole mark.
+dimension: glyphs scale to `glyphSize` and width follows the aspect ratio. Past 1.8:1 a
+glyph is fitted by width instead and ends up shorter than its neighbours. Transparent
+margins are trimmed on load, so padding is irrelevant, but the *content* bounding box sets
+the aspect ratio, so a stray pixel resizes the whole glyph.
 
-Artwork is used as a silhouette: only the alpha channel survives, filled with the session
-color at draw time. One flat color, no gradients or shading. At 16pt a mark is 32 physical
-pixels tall on a 2x display, so anything under 2px, about 16px in a 256px frame,
-disappears.
+Only the alpha channel survives; the shape is flooded with the session color at draw time.
+One flat color, no gradients. At 16pt a glyph is 32 physical pixels tall on a 2x display,
+so anything under 2px, roughly 16px in a 256px frame, disappears.
 
 ## How it works
 
@@ -136,62 +128,59 @@ disappears.
 
 - **Lifecycle**—`~/.cmuxterm/<agent>-hook-sessions.json`, written by the cmux agent hooks.
   Each session carries `agentLifecycle` (`running` | `idle` | `needsInput` | `unknown`),
-  `workspaceId` and `pid`. Entries are trusted only while the pid is alive.
-- **Agent identity**—the hook filename. Events also carry it as `_source`.
-- **Whether an AI is loaded at all**—`cmux top --all --processes` emits a per-workspace
-  tag row (`workspace:<uuid>:tag:claude_code`) with a `Running` or `Idle` label. A
-  workspace running only a shell emits no tag row, which is what distinguishes a plain
-  terminal from a workspace whose agent has exited.
+  `workspaceId` and `pid`. Entries count only while the pid is alive.
+- **Agent identity**—the hook filename.
+- **Whether an agent is loaded at all**—`cmux top --all --processes` emits a per-Workspace
+  tag row (`workspace:<uuid>:tag:claude_code`) labelled `Running` or `Idle`. A Workspace
+  running only a shell emits none, which is what separates a plain terminal from one whose
+  agent exited.
 - **Names, order and color**—`cmux workspace list --json --id-format both`, per window.
 - **Change detection**—a `DispatchSource` watch on `~/.cmuxterm`, debounced 120ms, with a
-  2s poll as a safety net. The hook files are replaced atomically, so the directory is
-  what changes. Workspaces, groups and tags refresh every 10s, since `cmux top` samples
-  CPU.
+  2s poll behind it. The hook files are replaced atomically, so the directory is what
+  changes. Workspaces, Workspace Groups and tags refresh every 10s, since `cmux top`
+  samples CPU.
 
-`cmux events --category agent --reconnect` is an available alternative source, carrying
-the same information plus `workspace_id`. The session files already hold the resolved
-lifecycle, so watching them avoids re-deriving state and keeps a subprocess out of the
-picture.
+`cmux events --category agent --reconnect` carries the same information plus
+`workspace_id`. The session files already hold the resolved lifecycle, so watching them
+avoids re-deriving state and keeps a subprocess out of the picture.
 
-Only live signals decide state. Hook files keep finished sessions around for restore, so a
-workspace whose agent exited days ago still has history on disk. Trusting that history
-resurrected dead workspaces as live agents, which is why nothing but a live session or a
-live cmux tag counts now.
+Only live signals count. Hook files keep finished sessions around for restore, so a
+Workspace whose agent exited days ago still has history on disk. Trusting it resurrected
+dead Workspaces as live agents, which is why nothing but a live session or a live cmux tag
+counts now.
 
 ### Color
 
-Session color is the workspace's `custom_color`, which cmux shares across a group's
-members. On a dark bar it is brightened before drawing, so the shade matches what cmux
-itself renders in dark mode rather than the raw hex.
+The session color is the Workspace's `custom_color`, which cmux shares across a Workspace
+Group's members. On a dark bar it is brightened first, so the shade matches what cmux
+renders in dark mode rather than the raw hex.
 
 ### Design decisions
 
-There is no dimmer "stopped" tier. One existed briefly, but it was only reachable when a
-session's process was alive while its lifecycle was `unknown` *and* cmux emitted no tag
-for it, a case that essentially never fires. Every visible mark is a live agent, so the
-two static levels differ only by whether you have looked at it yet.
+There is no dimmer "stopped" tier. One existed briefly, reachable only when a session's
+process was alive while its lifecycle was `unknown` *and* cmux emitted no tag, which
+essentially never fires. Every visible glyph is a live agent, so the two static levels
+differ only by whether you have looked at it.
 
-An earlier build tinted a working agent in cmux's Amber. It was dropped because it
-overrode the session color exactly when you most want to know *which* project is busy, and
-because it competed with the workspace colors around it.
+An earlier build tinted working agents in cmux's Amber. It overrode the session color
+exactly when you most want to know *which* project is busy.
 
-A workspace that has never loaded an AI is left out of the row: the row is about agents,
-and a plain shell has nothing to report.
+A Workspace that has never loaded an agent is left out: the row is about agents, and a
+plain shell has nothing to report.
 
 "Finished" and "waiting on you" are not separated, because for a coding agent they are the
-same condition: a finished turn *is* the agent waiting. What is separated is whether you
-have *seen* it. A turn that ends while you are looking elsewhere stays at full brightness
-until you visit that workspace, then drops to 70%. A turn that finishes while you are
-watching never brightens at all. An earlier build drove this off unread cmux notifications
-(`rpc notification.list`, `is_read == false`) instead; that signal is the hook to restore
-if visiting ever proves too blunt.
+same thing: a finished turn *is* the agent waiting. What is separated is whether you have
+*seen* it. A turn ending while you look elsewhere stays bright until you visit that
+Workspace; one finishing while you watch never brightens. An earlier build drove this off
+unread cmux notifications (`rpc notification.list`, `is_read == false`), the hook to
+restore if visiting proves too blunt.
 
-Folders are excluded. cmux models a sidebar folder as a workspace that anchors a group, so
-`workspace list` returns folders and real workspaces indistinguishably. The anchors come
-from `workspace.group.list` and are filtered out.
+Workspace Groups are filtered out. cmux models a Group as a Workspace that anchors it, so
+`workspace list` returns both indistinguishably; the anchors come from
+`workspace.group.list`.
 
-`render()` compares a signature of the drawn row before touching the image, so refreshes
-and appearance changes that produce an identical row cost nothing.
+`render()` compares a signature of the row before touching the image, so refreshes that
+produce an identical row cost nothing.
 
 ## Development
 
@@ -202,40 +191,33 @@ and appearance changes that produce an identical row cost nothing.
 ./build.sh uninstall
 ```
 
-The app has no dependencies and no Xcode project: `build.sh` runs `swiftc` over
-`Sources/*.swift` directly.
+No dependencies and no Xcode project: `build.sh` runs `swiftc` over `Sources/*.swift`.
 
 Two flags check behaviour without reading the menu bar:
 
 ```sh
-build/Agentique.app/Contents/MacOS/Agentique --dump              # the row, as text
-build/Agentique.app/Contents/MacOS/Agentique --preview out.png   # the row, over both bar backgrounds
+build/Agentique.app/Contents/MacOS/Agentique --dump             # the row, as text
+build/Agentique.app/Contents/MacOS/Agentique --preview out.png  # the row, over both bar backgrounds
 ```
 
-Sizing lives at the top of `Sources/MarkRenderer.swift`: `markSize` 16pt, `gap` 10pt,
-`height` 18pt. The mark is sized against the filled icons sharing the bar, which measure
-about 16pt tall. The gap is half the roughly 20pt rhythm macOS leaves between neighbouring
-status items, so the row reads as one item rather than several. Spacing is uniform; an
-earlier build widened it across a cmux group boundary, but group membership is no longer
-drawn.
+Sizing lives at the top of `Sources/GlyphRenderer.swift`: `glyphSize` 16pt, `gap` 10pt,
+`height` 18pt. Glyphs are sized against the filled icons sharing the bar, which run about
+16pt tall, and the gap is half the roughly 20pt rhythm macOS leaves between status items,
+so the row reads as one item rather than several.
 
-Supporting scripts, all run from the repository root:
+Supporting scripts, run from the repository root:
 
 ```sh
-uv run --with pillow python3 Tools/preview-marks.py    # every mark at true menu bar size
+uv run --with pillow python3 Tools/preview-glyphs.py   # every glyph at true menu bar size
 uv run --with pillow python3 Tools/preview-opacity.py  # compare resting-brightness candidates
-uv run --with pillow python3 Tools/make-demo.py        # regenerate the images in docs/
+uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png
 swift Tools/rasterize.swift <in.svg|pdf> <out.png> <height>
 swift Tools/make-icon.swift                            # regenerate Assets/AppIcon.icns
 ```
 
-`preview-marks.py` and `preview-opacity.py` write to `~/Desktop` and read the live cmux
-row, so judge legibility on the actual-size render rather than the magnified one.
+`preview-glyphs.py` and `preview-opacity.py` write to `~/Desktop` and read the live row,
+so judge legibility on the actual-size render, not the magnified one.
 
 ## License
 
-[MIT](LICENSE).
-
-Agentique is an independent project and is not affiliated with or endorsed by the makers
-of cmux. The Codex mark in `Assets/agents/codex.svg` is a trademark of OpenAI and is
-included only to identify Codex sessions.
+[MIT](LICENSE). An independent project, not affiliated with cmux.

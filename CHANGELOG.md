@@ -7,21 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Renamed the per-Workspace symbol from "mark" to "glyph" throughout, including the
+  `GLYPH` column in `--dump` output and `Sources/GlyphRenderer.swift`.
+- Adopted cmux's nouns (Workspace, Workspace Group) in the documentation.
+
 ## [0.1.0] - 2026-07-22
 
 Initial release.
 
 ### Added
 
-- A menu bar status item drawing one mark per cmux workspace, in that workspace's
+- A menu bar status item drawing one glyph per cmux Workspace, in that Workspace's
   session color.
 - Agent state shown by brightness and motion: a mid-turn agent pulses, a finished turn
-  holds at full brightness until you visit its workspace, and a visited one settles.
-- Workspaces that have never loaded an AI are left out of the row.
+  holds at full brightness until you visit its Workspace, and a visited one settles.
+- Workspaces that have never loaded an agent are left out of the row.
 - Per-agent artwork loaded from `Assets/agents/<agent>.{pdf,svg,png}`, tinted at draw
   time, falling back to a filled circle.
-- Click a mark to jump to its workspace; click the padding or right-click for the
-  workspace list.
+- Click a glyph to jump to its Workspace; click the padding or right-click for the
+  Workspace list.
 - `--dump`, `--preview <path>`, `--version` and `--help` for checking behaviour without
   reading the menu bar.
 - `build.sh` with `build`, `run`, `install` and `uninstall`, installing a launch agent
