@@ -1,7 +1,7 @@
 #!/usr/bin/env swift
 import AppKit
 
-// Rasterise vector artwork so the Python preview tools can composite it — PIL reads no
+// Rasterise vector artwork so the Python preview tools can composite it—PIL reads no
 // SVG or PDF, but AppKit reads both, and this is the same loader the app itself uses.
 //
 //   swift Tools/rasterize.swift <input.svg|pdf> <output.png> <height>

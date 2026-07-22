@@ -6,7 +6,7 @@
 Writes ~/Desktop/agentique-settled.png: one row per candidate, drawn with the real glyphs,
 real session colors and real spacing, at true menu bar scale. `settled` is both the
 resting level of a seen glyph and the floor of the working pulse. Glyphs are dimmed by color, not opacity, so
-each sits at full opacity in a darker shade — the first at full brightness, the rest at
+each sits at full opacity in a darker shade—the first at full brightness, the rest at
 the row's fraction.
 
 Rows are drawn over `Tools/menubar-backdrop.png`, a screenshot of the real menu bar. That
@@ -41,7 +41,7 @@ def row_from_dump():
 
 
 def artwork(key):
-    """Vector art is rasterised through AppKit first — PIL reads neither SVG nor PDF."""
+    """Vector art is rasterised through AppKit first—PIL reads neither SVG nor PDF."""
     for ext in ("pdf", "svg", "png"):
         path = f"Assets/agents/{key}.{ext}"
         if not os.path.exists(path):
@@ -61,7 +61,7 @@ def artwork(key):
 
 
 def dimmed_rgb(hex_color, fraction):
-    """Scale brightness toward black, keeping hue — matches CmuxColor.dim."""
+    """Scale brightness toward black, keeping hue—matches CmuxColor.dim."""
     import colorsys
     r, g, b = (int(hex_color[i:i + 2], 16) / 255 for i in (1, 3, 5))
     h, s, v = colorsys.rgb_to_hsv(r, g, b)
@@ -85,7 +85,7 @@ def backdrop_strip(path, width):
     """A clean menu bar gradient, taken from a screenshot with icons in it.
 
     Per row, the median across x lands on background as long as icons cover less than
-    half the width — which removes them without needing a clean plate."""
+    half the width—which removes them without needing a clean plate."""
     source = Image.open(path).convert("RGB")
     height = source.height
     pixels = source.load()

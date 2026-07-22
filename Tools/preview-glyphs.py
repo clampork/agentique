@@ -4,7 +4,7 @@
     uv run --with pillow python3 Tools/preview-glyphs.py
 
 Writes ~/Desktop/agentique-glyphs.png: each glyph magnified, with the actual-size render
-directly beneath it. The small one is what the menu bar really draws — judge legibility
+directly beneath it. The small one is what the menu bar really draws—judge legibility
 there, not on the magnified copy.
 """
 import glob

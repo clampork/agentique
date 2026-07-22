@@ -28,14 +28,14 @@ CI (`.github/workflows/ci.yml`) can only build and run `--version`/`--help`: a r
 Artwork tooling (per the global Python rule, always via `uv`):
 
 ```
-uv run --with pillow python3 Tools/preview-glyphs.py    # every glyph at true menu bar size → ~/Desktop
+uv run --with pillow python3 Tools/preview-glyphs.py   # every glyph at true menu bar size → ~/Desktop
 uv run --with pillow python3 Tools/preview-opacity.py  # compare Palette.settled candidates over a real menu bar screenshot
-uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png for the README
+uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png and docs/click.png
 swift Tools/rasterize.swift <in.svg|pdf> <out.png> <height>  # rasterize vectors for the Python tools
 swift Tools/make-icon.swift                            # regenerate Assets/AppIcon.icns
 ```
 
-`make-demo.py` draws a synthetic row, not the live one, so the README renders identically everywhere and no real project names leak. Its geometry and `Palette` constants are copied from the Swift and must be updated alongside it.
+`make-demo.py` is entirely synthetic—an invented Workspace row and a hand-drawn cmux mock—so the README renders identically everywhere, no real project names leak, and the images regenerate without cmux running. Its geometry and `Palette` constants are copied from the Swift and must be updated alongside it.
 
 Runtime diagnostics land in `~/Library/Logs/Agentique.log` (slot count, status item placement, cmux command failures).
 
@@ -58,7 +58,7 @@ Four source files with a strict layering—cmux I/O, domain model, controller, d
 
 ## Docs that quote constants
 
-Three files restate values that live in the Swift: `README.md` (state table, sizing, artwork specs), `Tools/make-demo.py` (geometry and `Palette`, to draw the README media), and this file. `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/GlyphRenderer.swift` are the source of truth. Changing either means updating all three and re-running `make-demo.py` — this has drifted before.
+Three files restate values that live in the Swift: `README.md` (state table, sizing, artwork specs), `Tools/make-demo.py` (geometry and `Palette`, to draw the README media), and this file. `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/GlyphRenderer.swift` are the source of truth. Changing either means updating all three and re-running `make-demo.py`; this has drifted before.
 
 ## Releasing
 

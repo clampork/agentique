@@ -5,8 +5,7 @@
 </p>
 
 <p align="center">
-  One glyph per <a href="https://www.cmux.dev/">cmux</a> Workspace in the macOS menu bar,
-  colored by project and animated by what its agent is doing.
+  <b>Every <a href="https://www.cmux.dev/">cmux</a> agent, at a glance.</b>
 </p>
 
 <p align="center">
@@ -14,6 +13,14 @@
   <a href="https://github.com/clampork/agentique/releases/latest"><img src="https://img.shields.io/github/v/release/clampork/agentique?sort=semver" alt="Latest release"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
   <img src="https://img.shields.io/badge/platform-macOS%2014%2B%20Apple%20Silicon-lightgrey" alt="Platform">
+</p>
+
+<p align="center">
+  <img src="docs/click.png" width="460" alt="An agent finishes in the background, its glyph brightens in the menu bar, and clicking it switches cmux to that Workspace.">
+</p>
+
+<p align="center">
+  <sub>An agent finishes while you are elsewhere. Its glyph brightens; one click lands you in that Workspace.</sub>
 </p>
 
 ## Why

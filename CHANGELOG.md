@@ -7,13 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-
-- Renamed the per-Workspace symbol from "mark" to "glyph" throughout, including the
-  `GLYPH` column in `--dump` output and `Sources/GlyphRenderer.swift`.
-- Adopted cmux's nouns (Workspace, Workspace Group) in the documentation.
-
-## [0.1.0] - 2026-07-22
+## [0.1.0] - 2026-07-23
 
 Initial release.
 
