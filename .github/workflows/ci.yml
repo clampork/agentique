@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build
+    runs-on: macos-latest
+
+    steps:
+      - name: Check out the repository
+        uses: actions/checkout@v7
+
+      - name: Report the Swift toolchain
+        run: swift --version
+
+      - name: Build
+        run: ./build.sh
+
+      # cmux is not present on a runner, so the checks are limited to the paths that
+      # do not touch it. --dump and --preview both need a live cmux to say anything.
+      - name: Verify the built app runs
+        run: |
+          build/Agentique.app/Contents/MacOS/Agentique --version
+          build/Agentique.app/Contents/MacOS/Agentique --help
