@@ -3,8 +3,8 @@
 
     uv run --with pillow python3 Tools/make-demo.py
 
-Writes docs/menubar.png (the row at rest), docs/pulse.gif (a working agent over one
-full pulse cycle) and docs/states.png (the three treatments, labelled).
+Writes docs/pulse.gif (the row over one full pulse cycle) and docs/states.png (the three
+treatments, labelled).
 
 The row is synthetic rather than read from a live cmux: the README should show the same
 picture on every machine, and a real row would leak whichever projects happened to be
@@ -172,10 +172,6 @@ def save_gif(frames, path, duration):
     )
 
 
-def make_menubar():
-    render_row(ROW, phase=1.0).convert("RGB").save(f"{OUT}/menubar.png")
-
-
 def make_pulse():
     count = round(PULSE_PERIOD * FPS)
     frames = [
@@ -233,10 +229,9 @@ def make_states():
 
 def main():
     os.makedirs(OUT, exist_ok=True)
-    make_menubar()
     make_pulse()
     make_states()
-    for name in ("menubar.png", "pulse.gif", "states.png"):
+    for name in ("pulse.gif", "states.png"):
         path = f"{OUT}/{name}"
         print(f"wrote {path} ({os.path.getsize(path) // 1024}KB)")
 
