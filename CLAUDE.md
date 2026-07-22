@@ -20,16 +20,22 @@ No tests or linter. Verification is headless, via the built binary:
 ```
 build/Agentique.app/Contents/MacOS/Agentique --dump            # print the row's state mapping
 build/Agentique.app/Contents/MacOS/Agentique --preview out.png # render the row over both menu bar backgrounds
+build/Agentique.app/Contents/MacOS/Agentique --version         # reads CFBundleShortVersionString from the bundle
 ```
+
+CI (`.github/workflows/ci.yml`) can only build and run `--version`/`--help`: a runner has no cmux, so `--dump` and `--preview` have nothing to report.
 
 Artwork tooling (per the global Python rule, always via `uv`):
 
 ```
 uv run --with pillow python3 Tools/preview-marks.py    # every mark at true menu bar size → ~/Desktop
 uv run --with pillow python3 Tools/preview-opacity.py  # compare Palette.settled candidates over a real menu bar screenshot
+uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/ media for the README
 swift Tools/rasterize.swift <in.svg|pdf> <out.png> <height>  # rasterize vectors for the Python tools
 swift Tools/make-icon.swift                            # regenerate Assets/AppIcon.icns
 ```
+
+`make-demo.py` draws a synthetic row, not the live one, so the README renders identically everywhere and no real project names leak. Its geometry and `Palette` constants are copied from the Swift and must be updated alongside it.
 
 Runtime diagnostics land in `~/Library/Logs/Agentique.log` (slot count, status item placement, cmux command failures).
 
@@ -42,7 +48,7 @@ Four source files with a strict layering—cmux I/O, domain model, controller, d
 - **`StatusRowController.swift`**—owns the single `NSStatusItem`. Refresh: a `DispatchSource` watch on `~/.cmuxterm` (debounced 120ms) plus a 2s poll; workspaces/groups/tags refresh on a 10s cadence, or immediately when the set of live-session workspaces changes. Tracks "unacknowledged" finished turns (ended while you looked elsewhere → full brightness until visited). `render()` skips redraws when a signature of the row is unchanged. Clicks on a mark jump to that workspace; clicks on padding or right-clicks open the menu—deliberately no attached `statusItem.menu`.
 - **`MarkRenderer.swift`**—draws the row image. Artwork from `Resources/agents/<key>.{pdf,svg,png}` is used as a silhouette: only the alpha channel survives, tinted with the session color at draw time. Transparent margins are trimmed at load. Sizing constants (`markSize`, `gap`, `height`, `edgeInset`) live at the top; spacing is a single uniform gap, not the per-group pair the README still describes.
 
-`main.swift` handles the `--dump`/`--preview` CLI modes before starting the app.
+`main.swift` handles the `--version`, `--help`, `--dump` and `--preview` CLI modes before starting the app.
 
 ## Invariants
 
@@ -50,9 +56,13 @@ Four source files with a strict layering—cmux I/O, domain model, controller, d
 - **Only live signals decide state.** Hook files keep finished sessions for restore; a dead pid must never resurrect a workspace as a live agent. A workspace with no session and no tag has never loaded an AI and is hidden entirely.
 - **Folders are excluded.** cmux models a sidebar folder as an anchor workspace; `workspace.group.list` supplies the anchors to filter and the group membership used for spacing.
 
-## README vs code
+## Docs that quote constants
 
-`README.md` is the design document—rationale for the state mapping, rejected alternatives, and artwork specs. Constants quoted there can drift; `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/MarkRenderer.swift` are the source of truth (e.g. the README currently says `settled` is 0.60 and calls it the pulse floor; the code has `settled` 0.70 with a separate `pulseFloor` 0.35). When changing behavior or constants, update the README to match.
+Three files restate values that live in the Swift: `README.md` (state table, sizing, artwork specs), `Tools/make-demo.py` (geometry and `Palette`, to draw the README media), and this file. `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/MarkRenderer.swift` are the source of truth. Changing either means updating all three and re-running `make-demo.py` — this has drifted before.
+
+## Releasing
+
+Versioning is [SemVer](https://semver.org/spec/v2.0.0.html), pre-1.0. `CFBundleShortVersionString` in `Info.plist` is the single source of the version; `--version` reads it back out of the bundle. A release is: bump `Info.plist` (and `CFBundleVersion`), move the `CHANGELOG.md` entry out of Unreleased, commit, tag `vX.Y.Z`, push the tag, then `gh release create`.
 
 ## cmux socket access
 
