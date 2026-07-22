@@ -27,11 +27,11 @@ final class StatusRowController: NSObject, NSMenuDelegate {
     /// Workspaces whose agent finished while you were not looking. These pulse in their
     /// session color until visited, then fall silent for good.
     private var unacknowledged = Set<String>()
-    /// Previous state per workspace, to catch the moment a turn ends.
+    /// Previous state per Workspace, to catch the moment a turn ends.
     private var previousStates: [String: SlotState] = [:]
 
     /// Where each glyph sits inside the row image, and how wide that image is, so a click
-    /// can be mapped back to the workspace under the cursor.
+    /// can be mapped back to the Workspace under the cursor.
     private var glyphFrames: [NSRect] = []
     private var imageWidth: CGFloat = 0
 
@@ -48,7 +48,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     func start() {
         // No `statusItem.menu`: that would open the list on any click. Clicks are handled
-        // directly so hitting a glyph jumps to its workspace and only the space around
+        // directly so hitting a glyph jumps to its Workspace and only the space around
         // the glyphs falls through to the menu.
         statusItem.button?.target = self
         statusItem.button?.action = #selector(handleClick(_:))
@@ -104,8 +104,8 @@ final class StatusRowController: NSObject, NSMenuDelegate {
             guard let self else { return }
             let sessions = CmuxBridge.liveSessions()
 
-            // Refresh structure the moment the set of workspaces running a live agent
-            // changes — one launched or exited — instead of waiting for the next structure
+            // Refresh structure the moment the set of Workspaces running a live agent
+            // changes—one launched or exited—instead of waiting for the next structure
             // tick. A launch otherwise takes until the tick to draw its glyph; an exit
             // otherwise lingers on a stale cached tag until the tick clears it, so a glyph
             // outlives its closed window until something else forces a redraw.
@@ -143,7 +143,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     // MARK: - Attention
 
-    /// Flags a workspace when its turn ends while you are looking elsewhere, and clears
+    /// Flags a Workspace when its turn ends while you are looking elsewhere, and clears
     /// the flag the moment you visit it. A turn that finishes on screen never flags at
     /// all, so nothing animates for work you already watched land.
     private func trackAcknowledgement(slots: [AgentSlot], visible: String?) {
@@ -159,14 +159,14 @@ final class StatusRowController: NSObject, NSMenuDelegate {
             }
             previousStates[id] = slot.state
         }
-        // Drop workspaces that have gone away.
+        // Drop Workspaces that have gone away.
         unacknowledged.formIntersection(present)
         previousStates = previousStates.filter { present.contains($0.key) }
     }
 
     // MARK: - Drawing
 
-    /// Every glyph keeps its session color, dimmed by brightness — not opacity — so it
+    /// Every glyph keeps its session color, dimmed by brightness—not opacity—so it
     /// stays a true shade of itself over the translucent bar. A working agent pulses
     /// between settled and full; a finished one is full until seen, then settles.
     private func spec(for slot: AgentSlot, appearance: NSAppearance?, pulse: CGFloat) -> GlyphSpec {
@@ -183,7 +183,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
             fraction = Palette.settled
         }
         let color = CmuxColor.dim(session, to: fraction)
-        return GlyphSpec(key: slot.glyphKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
+        return GlyphSpec(key: slot.glyphKey, color: color, groupID: slot.workspace.groupID)
     }
 
     private func render() {
@@ -194,7 +194,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
         // Refreshes and appearance changes often produce an identical row; skipping
         // those avoids pointless image work between real animation frames.
         let signature = specs
-            .map { "\($0.key):\($0.groupID ?? "-"):\($0.color.hexString):\(Int($0.alpha * 100))" }
+            .map { "\($0.key):\($0.groupID ?? "-"):\($0.color.hexString)" }
             .joined(separator: "|")
         guard signature != lastSignature else { return }
         lastSignature = signature
@@ -255,7 +255,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     // MARK: - Clicks
 
-    /// A click on a glyph jumps straight to that workspace. A click on the padding around
+    /// A click on a glyph jumps straight to that Workspace. A click on the padding around
     /// the glyphs, or any right-click, opens the list instead.
     @objc private func handleClick(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent

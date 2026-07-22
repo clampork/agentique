@@ -1,7 +1,7 @@
 import AppKit
 import Foundation
 
-/// Reads cmux state: workspaces and groups over the control socket, agent lifecycle
+/// Reads cmux state: Workspaces and Workspace Groups over the control socket, agent lifecycle
 /// from the hook session files the agent integrations write.
 enum CmuxBridge {
     static let sessionDirectory = FileManager.default.homeDirectoryForCurrentUser
@@ -70,7 +70,7 @@ enum CmuxBridge {
 
     // MARK: - Workspaces
 
-    /// Every workspace across every cmux window, in sidebar order, excluding folders.
+    /// Every Workspace across every cmux window, in sidebar order, excluding Group anchors.
     static func workspaces() -> [Workspace] {
         let groups = groupMembership()
         let windows = windowIDs()
@@ -94,11 +94,11 @@ enum CmuxBridge {
             .sorted { $0.index < $1.index }
     }
 
-    /// Group anchors and which group each workspace belongs to.
+    /// Workspace Group anchors, and which Group each Workspace belongs to.
     ///
-    /// cmux models a sidebar folder as a workspace that anchors a group, so the folder
-    /// and its members come back indistinguishable from `workspace list`; the group
-    /// listing is what separates them and supplies the membership used for spacing.
+    /// cmux models a Workspace Group as a Workspace that anchors it, so the anchor
+    /// and its members come back indistinguishable from `workspace list`; the Group
+    /// listing is what separates them.
     private static func groupMembership() -> (anchors: Set<String>, byWorkspace: [String: String]) {
         guard let output = run(["rpc", "workspace.group.list"]),
               let data = output.data(using: .utf8),
@@ -159,12 +159,12 @@ enum CmuxBridge {
 
     // MARK: - Workspace agent tags
 
-    /// cmux's own agent tags, keyed by workspace ID.
+    /// cmux's own agent tags, keyed by Workspace ID.
     ///
     /// Output rows are tab separated as `cpu, mem, count, kind, id, parent, label`, and a
-    /// tag row's id looks like `workspace:<UUID>:tag:claude_code`. A workspace running
+    /// tag row's id looks like `workspace:<UUID>:tag:claude_code`. A Workspace running
     /// only a shell produces no tag row at all, which is how a plain terminal is told
-    /// apart from a workspace whose agent has exited.
+    /// apart from a Workspace whose agent has exited.
     static func workspaceTags() -> [String: WorkspaceTag] {
         guard let output = run(["top", "--all", "--processes", "--format", "tsv"]) else { return [:] }
         var tags: [String: WorkspaceTag] = [:]
@@ -184,8 +184,8 @@ enum CmuxBridge {
             // cmux emits a canonical agent tag (`codex`, `claude_code`) plus a per-session
             // sub-tag (`codex.<uuid>`) that carries no lifecycle label. Drop the sub-tag:
             // being written last, it would otherwise overwrite the canonical tag and blank
-            // the label, so the agent never reads as Running — its glyph never pulses and a
-            // finished turn never brightens — and its `agentKey` stops matching artwork.
+            // the label, so the agent never reads as Running—its glyph never pulses and a
+            // finished turn never brightens—and its `agentKey` stops matching artwork.
             guard !kind.contains(".") else { continue }
             let label = fields.count >= 7 ? fields[6].trimmingCharacters(in: .whitespaces) : ""
             tags[workspaceID] = WorkspaceTag(kind: kind, label: label)
@@ -195,10 +195,10 @@ enum CmuxBridge {
 
     // MARK: - Agent sessions
 
-    /// Live agent sessions keyed by workspace ID.
+    /// Live agent sessions keyed by Workspace ID.
     ///
     /// The hook files keep finished sessions around for restore, so entries are only
-    /// trusted when their process is still alive — that is also what makes a
+    /// trusted when their process is still alive—that is also what makes a
     /// hibernated or exited agent drop out of the live set.
     static func liveSessions() -> [String: AgentSession] {
         var best: [String: AgentSession] = [:]
@@ -210,7 +210,7 @@ enum CmuxBridge {
         }
         // cmux flips a session to `running` the moment any input is submitted, including
         // client-only commands like `/clear` that never issue a model turn and so never
-        // complete — leaving the glyph pulsing until the next real turn. The transcript is
+        // complete—leaving the glyph pulsing until the next real turn. The transcript is
         // the tiebreaker: only sessions with a live turn stay `working`.
         for (workspaceID, session) in best
         where session.lifecycle == .running && endsWithLocalCommand(session.transcriptPath) {
@@ -312,9 +312,9 @@ enum CmuxBridge {
 
     // MARK: - Attention
 
-    /// The workspace you are currently looking at: selected in cmux, with cmux frontmost.
+    /// The Workspace you are currently looking at: selected in cmux, with cmux frontmost.
     ///
-    /// Selection alone is not enough — the selected workspace stays selected while cmux
+    /// Selection alone is not enough—the selected Workspace stays selected while cmux
     /// sits in the background, which is exactly when a finished turn goes unseen.
     static func visibleWorkspaceID() -> String? {
         guard NSWorkspace.shared.frontmostApplication?.bundleIdentifier == cmuxBundleID,

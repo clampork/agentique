@@ -1,42 +1,45 @@
 import AppKit
 
-/// One glyph to draw: which vector, in what color, at what alpha.
+/// One glyph to draw: which vector, in what color.
+///
+/// There is deliberately no opacity here. State is carried by *brightness*, so a dimmed
+/// glyph is a darker shade at full opacity rather than a translucent one bleeding into
+/// the bar behind it.
 struct GlyphSpec {
     let key: String
     let color: NSColor
-    let alpha: CGFloat
-    /// cmux group. Spacing is uniform, so this only feeds the redraw signature.
+    /// cmux Workspace Group. Spacing is uniform, so this only feeds the redraw signature.
     let groupID: String?
 }
 
 /// Draws the row of agent glyphs that becomes the status item's image.
 ///
-/// Glyphs come from `Resources/agents/<key>.pdf` when present and fall back to built-in
-/// vector shapes otherwise, so dropping a PDF in is the whole install step. The artwork
-/// is used purely as a silhouette — its alpha channel is tinted at draw time — which is
-/// why a flat single-color export is what the loader expects.
+/// Glyphs come from `Resources/agents/<key>.{pdf,svg,png}` when present and fall back to
+/// a filled circle otherwise, so dropping artwork in is the whole install step. The
+/// artwork is used purely as a silhouette—its alpha channel is tinted at draw time—which
+/// is why a flat single-color export is what the loader expects.
 enum GlyphRenderer {
     /// Glyph height in points, sized against the system items sharing the bar: filled
     /// icons there (Telegram, coffee pot) measure ~16pt tall, and the glyphs are dense
     /// silhouettes of the same kind. Kept whole so the glyph lands on exact pixels at 2x.
-    static var glyphSize: CGFloat = 16
+    static let glyphSize: CGFloat = 16
     /// Clear space between glyphs. Half the ~20pt rhythm macOS leaves between neighbouring
     /// status items, so the row reads as one item rather than several.
     ///
     /// A gap rather than a center distance, because artwork is fitted by height and a
     /// wide glyph would otherwise overlap its neighbour.
-    static var gap: CGFloat = 10
+    static let gap: CGFloat = 10
     /// Ceiling on how wide a single glyph may get relative to its height.
-    static var maxAspect: CGFloat = 1.8
+    static let maxAspect: CGFloat = 1.8
     /// Overall image height.
-    static var height: CGFloat = 18
-    static var edgeInset: CGFloat = 4
+    static let height: CGFloat = 18
+    static let edgeInset: CGFloat = 4
 
     private static var cache: [String: NSImage] = [:]
 
     // MARK: - Artwork
 
-    /// Vector is preferred, but raster art is accepted — at 11pt it is drawn into 22
+    /// Vector is preferred, but raster art is accepted: at 16pt it is drawn into 32
     /// pixels on a 2x display, so anything 256px or larger downsamples cleanly.
     private static let artworkExtensions = ["pdf", "svg", "png"]
 
@@ -69,7 +72,7 @@ enum GlyphRenderer {
         guard width > 0, height > 0 else { return image }
 
         // Redraw into a known RGBA layout before scanning. CGImage byte order varies by
-        // source — SVG and PNG decode differently — and guessing the alpha offset made
+        // source—SVG and PNG decode differently—and guessing the alpha offset made
         // trimming fail silently on vector art, which then rendered undersized because
         // its transparent margin was being scaled as though it were artwork.
         var buffer = [UInt8](repeating: 0, count: width * height * 4)
@@ -112,11 +115,7 @@ enum GlyphRenderer {
         return NSImage(cgImage: cropped, size: NSSize(width: box.width, height: box.height))
     }
 
-    static func clearCache() {
-        cache.removeAll()
-    }
-
-    /// Resolves `labelColor` against the menu bar's appearance, for workspaces with no
+    /// Resolves `labelColor` against the menu bar's appearance, for Workspaces with no
     /// color of their own.
     static func neutralColor(for appearance: NSAppearance?) -> NSColor {
         var resolved = NSColor.labelColor
@@ -144,7 +143,7 @@ enum GlyphRenderer {
         return NSSize(width: glyphSize * aspect, height: glyphSize)
     }
 
-    /// Left edge of each glyph, spaced by a uniform gap regardless of group membership.
+    /// Left edge of each glyph, spaced by a uniform gap regardless of Workspace Group.
     private static func layout(_ specs: [GlyphSpec]) -> (origins: [CGFloat], sizes: [NSSize], width: CGFloat) {
         var origins: [CGFloat] = []
         var sizes: [NSSize] = []
@@ -194,10 +193,8 @@ enum GlyphRenderer {
     }
 
     private static func draw(_ spec: GlyphSpec, in box: NSRect) {
-        let color = spec.color.withAlphaComponent(spec.alpha)
-
         guard let art = artwork(for: spec.key) else {
-            drawFallback(key: spec.key, color: color, in: box)
+            drawFallback(color: spec.color, in: box)
             return
         }
 
@@ -213,14 +210,14 @@ enum GlyphRenderer {
 
         NSGraphicsContext.saveGraphicsState()
         art.draw(in: target, from: .zero, operation: .sourceOver, fraction: 1)
-        color.set()
+        spec.color.set()
         // sourceAtop recolors only where the artwork already has coverage.
         target.fill(using: .sourceAtop)
         NSGraphicsContext.restoreGraphicsState()
     }
 
     /// Shape used until an agent's real artwork is dropped in.
-    private static func drawFallback(key: String, color: NSColor, in box: NSRect) {
+    private static func drawFallback(color: NSColor, in box: NSRect) {
         color.set()
         NSBezierPath(ovalIn: box).fill()
     }

@@ -14,7 +14,7 @@ enum SlotState {
     case working
     /// Turn finished, which for a coding agent is the same as waiting on you.
     case ready
-    /// Plain terminal — no AI has ever been loaded in this workspace. Not drawn.
+    /// Plain terminal—no AI has ever been loaded in this Workspace. Not drawn.
     case terminal
 
     /// Hue is reserved for identity, so state is carried by motion and brightness alone.
@@ -32,15 +32,15 @@ struct AgentSession {
     let cwd: String?
     let transcriptPath: String?
     /// Set when cmux still calls this `running` but the transcript shows it is parked on a
-    /// client-only command like `/clear` that never runs a turn — see
+    /// client-only command like `/clear` that never runs a turn—see
     /// `CmuxBridge.liveSessions`. Such a session is treated as finished, not working.
     var parkedOnLocalCommand = false
 }
 
-/// cmux's own per-workspace agent tag, from `cmux top --processes`.
+/// cmux's own per-Workspace agent tag, from `cmux top --processes`.
 ///
 /// The tag is the authoritative answer to "has an AI been loaded here at all" —
-/// a workspace running only a shell emits no tag row.
+/// a Workspace running only a shell emits no tag row.
 struct WorkspaceTag {
     /// e.g. `claude_code`, `codex`.
     let kind: String
@@ -56,7 +56,7 @@ struct WorkspaceTag {
     }
 }
 
-/// One workspace in the cmux sidebar.
+/// One Workspace in the cmux sidebar.
 struct Workspace {
     let id: String
     let title: String
@@ -64,18 +64,18 @@ struct Workspace {
     let selected: Bool
     /// Hex string from cmux, e.g. `#3D59A1`. Shared across a group's members.
     let colorHex: String?
-    /// The cmux group (sidebar folder) this workspace belongs to, if any.
+    /// The cmux Workspace Group this Workspace belongs to, if any.
     let groupID: String?
 }
 
-/// A workspace paired with whatever is running in it — one glyph in the row.
+/// A Workspace paired with whatever is running in it—one glyph in the row.
 struct AgentSlot {
     let workspace: Workspace
     let session: AgentSession?
     let tag: WorkspaceTag?
 
     /// Only live signals count. Hook files keep finished sessions around for restore, so
-    /// old history must never resurrect a workspace that is now just a shell.
+    /// old history must never resurrect a Workspace that is now just a shell.
     var state: SlotState {
         if let session {
             switch session.lifecycle {
@@ -98,7 +98,7 @@ struct AgentSlot {
         session?.agent ?? tag?.agentKey ?? "fallback"
     }
 
-    /// A workspace that has never loaded an AI is left out of the row entirely — the row
+    /// A Workspace that has never loaded an AI is left out of the row entirely—the row
     /// is about agents, and a plain shell has nothing to report.
     var isVisible: Bool { state != .terminal }
 
@@ -123,9 +123,9 @@ struct AgentSlot {
 /// which overrode the session color exactly when you most want to know which project is
 /// busy; identity now always survives, and state rides on brightness and motion.
 enum Palette {
-    /// Finished and not yet looked at — full brightness, the loudest a static glyph gets.
+    /// Finished and not yet looked at—full brightness, the loudest a static glyph gets.
     static let full: CGFloat = 1.0
-    /// Finished and already seen — a dimmer static glyph that still reads as its own color.
+    /// Finished and already seen—a dimmer static glyph that still reads as its own color.
     static let settled: CGFloat = 0.70
     /// Floor of the working pulse: a mid-turn glyph swings between this and full brightness.
     static let pulseFloor: CGFloat = 0.35
@@ -148,7 +148,7 @@ enum CmuxColor {
         )
     }
 
-    /// Lifts a workspace color for a dark bar: a brightness floor plus a push toward
+    /// Lifts a Workspace color for a dark bar: a brightness floor plus a push toward
     /// white, with a light saturation bump. Tuned to land on the same shades cmux shows
     /// in dark mode, so a glyph reads as the same color as the tab it stands for.
     static func brightenedForDarkAppearance(_ color: NSColor) -> NSColor {
@@ -170,7 +170,7 @@ enum CmuxColor {
         )
     }
 
-    /// The shade to draw a workspace color at, brightened on a dark bar and left alone
+    /// The shade to draw a Workspace color at, brightened on a dark bar and left alone
     /// on a light one.
     static func display(hex: String?, isDark: Bool) -> NSColor? {
         guard let base = from(hex: hex) else { return nil }

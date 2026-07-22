@@ -88,7 +88,7 @@ if let index = CommandLine.arguments.firstIndex(of: "--preview"),
                 ? Palette.settled + (Palette.full - Palette.settled) * pulse
                 : Palette.full
             let color = CmuxColor.dim(session, to: fraction)
-            return GlyphSpec(key: slot.glyphKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
+            return GlyphSpec(key: slot.glyphKey, color: color, groupID: slot.workspace.groupID)
         }
     }
 
