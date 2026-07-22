@@ -50,13 +50,13 @@ if CommandLine.arguments.contains("--dump") {
         text.count >= width ? text : text + String(repeating: " ", count: width - text.count)
     }
 
-    print(pad("WORKSPACE", 17) + pad("STATE", 10) + pad("MARK", 10) + pad("COLOR", 9) + "TREATMENT")
+    print(pad("WORKSPACE", 17) + pad("STATE", 10) + pad("GLYPH", 10) + pad("COLOR", 9) + "TREATMENT")
     for slot in slots {
         let color: String = slot.workspace.colorHex ?? "neutral"
         let treatment: String = slot.state.pulses ? "pulsing" : slot.detail
         var line = pad(slot.workspace.title, 17)
         line += pad(slot.detail, 10)
-        line += pad(slot.markKey, 10)
+        line += pad(slot.glyphKey, 10)
         line += pad(color, 9)
         line += treatment
         print(line)
@@ -80,7 +80,7 @@ if let index = CommandLine.arguments.firstIndex(of: "--preview"),
         )
     }.filter(\.isVisible)
 
-    func specs(isDark: Bool, pulse: CGFloat) -> [MarkSpec] {
+    func specs(isDark: Bool, pulse: CGFloat) -> [GlyphSpec] {
         slots.map { slot in
             let session = CmuxColor.display(hex: slot.workspace.colorHex, isDark: isDark)
                 ?? (isDark ? NSColor.white : NSColor.black)
@@ -88,21 +88,21 @@ if let index = CommandLine.arguments.firstIndex(of: "--preview"),
                 ? Palette.settled + (Palette.full - Palette.settled) * pulse
                 : Palette.full
             let color = CmuxColor.dim(session, to: fraction)
-            return MarkSpec(key: slot.markKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
+            return GlyphSpec(key: slot.glyphKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
         }
     }
 
     let scale: CGFloat = 4
     // Dark bar at peak and trough of the pulse, then the light bar.
-    let rows: [(NSColor, [MarkSpec])] = [
+    let rows: [(NSColor, [GlyphSpec])] = [
         (NSColor(white: 0.13, alpha: 1), specs(isDark: true, pulse: 1.0)),
         (NSColor(white: 0.13, alpha: 1), specs(isDark: true, pulse: 0.0)),
         (NSColor(white: 0.92, alpha: 1), specs(isDark: false, pulse: 1.0)),
     ]
 
-    let rowImages = rows.map { MarkRenderer.rowImage(specs: $0.1, appearance: nil) }
+    let rowImages = rows.map { GlyphRenderer.rowImage(specs: $0.1, appearance: nil) }
     let width = (rowImages.map(\.size.width).max() ?? 100) * scale
-    let rowHeight = MarkRenderer.height * scale
+    let rowHeight = GlyphRenderer.height * scale
     let canvas = NSSize(width: width, height: rowHeight * CGFloat(rows.count))
 
     let out = NSImage(size: canvas, flipped: false) { _ in

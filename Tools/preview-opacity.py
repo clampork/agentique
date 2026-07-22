@@ -3,9 +3,9 @@
 
     uv run --with pillow python3 Tools/preview-opacity.py [backdrop.png]
 
-Writes ~/Desktop/agentique-settled.png: one row per candidate, drawn with the real marks,
+Writes ~/Desktop/agentique-settled.png: one row per candidate, drawn with the real glyphs,
 real session colors and real spacing, at true menu bar scale. `settled` is both the
-resting level of a seen mark and the floor of the working pulse. Marks are dimmed by color, not opacity, so
+resting level of a seen glyph and the floor of the working pulse. Glyphs are dimmed by color, not opacity, so
 each sits at full opacity in a darker shade — the first at full brightness, the rest at
 the row's fraction.
 
@@ -21,8 +21,8 @@ from PIL import Image, ImageDraw
 
 CANDIDATES = [0.20, 0.30, 0.35, 0.40, 0.50, 0.60]
 
-# MarkRenderer geometry, doubled for a 2x display.
-MARK, GAP, GROUP_GAP, PAD = 28, 16, 40, 24
+# GlyphRenderer geometry, doubled for a 2x display.
+GLYPH, GAP, PAD = 32, 20, 24
 BACKDROP = (28, 28, 30, 255)
 LABEL = (150, 150, 155, 255)
 
@@ -30,14 +30,14 @@ APP = "build/Agentique.app/Contents/MacOS/Agentique"
 
 
 def row_from_dump():
-    """(mark key, hex color) per visible workspace, in row order."""
+    """(glyph key, hex color) per visible workspace, in row order."""
     out = subprocess.run([APP, "--dump"], capture_output=True, text=True).stdout
-    marks = []
+    glyphs = []
     for line in out.splitlines()[1:]:
         parts = re.split(r"\s{2,}", line.strip())
         if len(parts) >= 4 and parts[3].startswith("#"):
-            marks.append((parts[2], parts[3]))
-    return marks
+            glyphs.append((parts[2], parts[3]))
+    return glyphs
 
 
 def artwork(key):
@@ -73,9 +73,9 @@ def tinted(key, hex_color, fraction):
     art = artwork(key)
     if art is None:
         return None
-    width = max(1, round(MARK * art.width / art.height))
-    scaled = art.resize((width, MARK), Image.LANCZOS)
-    # Dim by color at full opacity, so the mark stays a true shade of itself.
+    width = max(1, round(GLYPH * art.width / art.height))
+    scaled = art.resize((width, GLYPH), Image.LANCZOS)
+    # Dim by color at full opacity, so the glyph stays a true shade of itself.
     layer = Image.new("RGBA", scaled.size, dimmed_rgb(hex_color, fraction) + (255,))
     layer.putalpha(scaled.split()[3])
     return layer
@@ -100,9 +100,9 @@ def backdrop_strip(path, width):
 
 
 def main():
-    marks = row_from_dump()
-    if not marks:
-        print("no marks; is cmux running?")
+    glyphs = row_from_dump()
+    if not glyphs:
+        print("no glyphs; is cmux running?")
         return
 
     backdrop_path = sys.argv[1] if len(sys.argv) > 1 else "Tools/menubar-backdrop.png"
@@ -110,13 +110,13 @@ def main():
     rows = []
     for settled in CANDIDATES:
         images, previous_color = [], None
-        for index, (key, color) in enumerate(marks):
+        for index, (key, color) in enumerate(glyphs):
             
             alpha = settled if index else 1.0
             image = tinted(key, color, alpha)
             if image is None:
                 continue
-            gap = 0 if index == 0 else (GAP if color == previous_color else GROUP_GAP)
+            gap = 0 if index == 0 else GAP
             images.append((gap, image))
             previous_color = color
         rows.append((settled, images))
@@ -134,11 +134,11 @@ def main():
         out.alpha_composite(strip, (gutter, y))
         draw.text((16, y + bar_height // 2 - 6), f"{int(settled * 100):>3}%", fill=LABEL)
         x = gutter + PAD
-        # Marks sit on the bar's optical centre, as the status item does.
-        mark_y = y + (bar_height - MARK) // 2 - 2
+        # Glyphs sit on the bar's optical centre, as the status item does.
+        glyph_y = y + (bar_height - GLYPH) // 2 - 2
         for gap, image in images:
             x += gap
-            out.alpha_composite(image, (x, mark_y))
+            out.alpha_composite(image, (x, glyph_y))
             x += image.width
         y += bar_height
 

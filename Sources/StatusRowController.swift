@@ -1,6 +1,6 @@
 import AppKit
 
-/// Owns the single status item and keeps its row of marks in sync with cmux.
+/// Owns the single status item and keeps its row of glyphs in sync with cmux.
 ///
 /// Lifecycle comes from the hook session files rather than the `cmux events` stream:
 /// the files already carry the exact value we want, every hook writes them, so watching
@@ -30,9 +30,9 @@ final class StatusRowController: NSObject, NSMenuDelegate {
     /// Previous state per workspace, to catch the moment a turn ends.
     private var previousStates: [String: SlotState] = [:]
 
-    /// Where each mark sits inside the row image, and how wide that image is, so a click
+    /// Where each glyph sits inside the row image, and how wide that image is, so a click
     /// can be mapped back to the workspace under the cursor.
-    private var markFrames: [NSRect] = []
+    private var glyphFrames: [NSRect] = []
     private var imageWidth: CGFloat = 0
 
     private var watcher: DispatchSourceFileSystemObject?
@@ -48,8 +48,8 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     func start() {
         // No `statusItem.menu`: that would open the list on any click. Clicks are handled
-        // directly so hitting a mark jumps to its workspace and only the space around
-        // the marks falls through to the menu.
+        // directly so hitting a glyph jumps to its workspace and only the space around
+        // the glyphs falls through to the menu.
         statusItem.button?.target = self
         statusItem.button?.action = #selector(handleClick(_:))
         statusItem.button?.sendAction(on: [.leftMouseUp, .rightMouseUp])
@@ -106,8 +106,8 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
             // Refresh structure the moment the set of workspaces running a live agent
             // changes — one launched or exited — instead of waiting for the next structure
-            // tick. A launch otherwise takes until the tick to draw its mark; an exit
-            // otherwise lingers on a stale cached tag until the tick clears it, so a mark
+            // tick. A launch otherwise takes until the tick to draw its glyph; an exit
+            // otherwise lingers on a stale cached tag until the tick clears it, so a glyph
             // outlives its closed window until something else forces a redraw.
             let sessionWorkspaces = Set(sessions.keys)
             let membershipChanged = sessionWorkspaces != self.trackedSessionWorkspaces
@@ -166,12 +166,12 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     // MARK: - Drawing
 
-    /// Every mark keeps its session color, dimmed by brightness — not opacity — so it
+    /// Every glyph keeps its session color, dimmed by brightness — not opacity — so it
     /// stays a true shade of itself over the translucent bar. A working agent pulses
     /// between settled and full; a finished one is full until seen, then settles.
-    private func spec(for slot: AgentSlot, appearance: NSAppearance?, pulse: CGFloat) -> MarkSpec {
-        let session = CmuxColor.display(hex: slot.workspace.colorHex, isDark: MarkRenderer.isDark(appearance))
-            ?? MarkRenderer.neutralColor(for: appearance)
+    private func spec(for slot: AgentSlot, appearance: NSAppearance?, pulse: CGFloat) -> GlyphSpec {
+        let session = CmuxColor.display(hex: slot.workspace.colorHex, isDark: GlyphRenderer.isDark(appearance))
+            ?? GlyphRenderer.neutralColor(for: appearance)
 
         let fraction: CGFloat
         switch slot.state {
@@ -183,7 +183,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
             fraction = Palette.settled
         }
         let color = CmuxColor.dim(session, to: fraction)
-        return MarkSpec(key: slot.markKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
+        return GlyphSpec(key: slot.glyphKey, color: color, alpha: 1, groupID: slot.workspace.groupID)
     }
 
     private func render() {
@@ -199,9 +199,9 @@ final class StatusRowController: NSObject, NSMenuDelegate {
         guard signature != lastSignature else { return }
         lastSignature = signature
 
-        let image = MarkRenderer.rowImage(specs: specs, appearance: appearance)
+        let image = GlyphRenderer.rowImage(specs: specs, appearance: appearance)
         statusItem.button?.image = image
-        markFrames = MarkRenderer.frames(for: specs)
+        glyphFrames = GlyphRenderer.frames(for: specs)
         imageWidth = image.size.width
 
         let working = slots.filter { $0.state == .working }.count
@@ -255,8 +255,8 @@ final class StatusRowController: NSObject, NSMenuDelegate {
 
     // MARK: - Clicks
 
-    /// A click on a mark jumps straight to that workspace. A click on the padding around
-    /// the marks, or any right-click, opens the list instead.
+    /// A click on a glyph jumps straight to that workspace. A click on the padding around
+    /// the glyphs, or any right-click, opens the list instead.
     @objc private func handleClick(_ sender: NSStatusBarButton) {
         let event = NSApp.currentEvent
         let wantsMenu = event?.type == .rightMouseUp
@@ -273,13 +273,13 @@ final class StatusRowController: NSObject, NSMenuDelegate {
     }
 
     /// Maps a click's x position onto a slot. The image is centered in the button, so the
-    /// mark frames have to be shifted by that inset before comparing.
+    /// glyph frames have to be shifted by that inset before comparing.
     private func slot(at x: CGFloat, in button: NSStatusBarButton) -> AgentSlot? {
-        guard markFrames.count == slots.count, imageWidth > 0 else { return nil }
+        guard glyphFrames.count == slots.count, imageWidth > 0 else { return nil }
         let inset = (button.bounds.width - imageWidth) / 2
         let local = x - inset
-        // A couple of points of slack, so clipping the edge of a mark still counts.
-        for (index, frame) in markFrames.enumerated()
+        // A couple of points of slack, so clipping the edge of a glyph still counts.
+        for (index, frame) in glyphFrames.enumerated()
         where local >= frame.minX - 2 && local <= frame.maxX + 2 {
             return slots[index]
         }
@@ -316,7 +316,7 @@ final class StatusRowController: NSObject, NSMenuDelegate {
             )
             item.target = self
             item.representedObject = slot.workspace.id
-            item.image = MarkRenderer.swatch(spec(for: slot, appearance: appearance, pulse: 1))
+            item.image = GlyphRenderer.swatch(spec(for: slot, appearance: appearance, pulse: 1))
             item.state = slot.workspace.selected ? .on : .off
             item.toolTip = slot.session?.cwd
             item.attributedTitle = detailTitle(slot)

@@ -1,7 +1,7 @@
 import AppKit
 
-/// One mark to draw: which vector, in what color, at what alpha.
-struct MarkSpec {
+/// One glyph to draw: which vector, in what color, at what alpha.
+struct GlyphSpec {
     let key: String
     let color: NSColor
     let alpha: CGFloat
@@ -9,24 +9,24 @@ struct MarkSpec {
     let groupID: String?
 }
 
-/// Draws the row of agent marks that becomes the status item's image.
+/// Draws the row of agent glyphs that becomes the status item's image.
 ///
-/// Marks come from `Resources/agents/<key>.pdf` when present and fall back to built-in
+/// Glyphs come from `Resources/agents/<key>.pdf` when present and fall back to built-in
 /// vector shapes otherwise, so dropping a PDF in is the whole install step. The artwork
 /// is used purely as a silhouette — its alpha channel is tinted at draw time — which is
 /// why a flat single-color export is what the loader expects.
-enum MarkRenderer {
-    /// Mark height in points, sized against the system items sharing the bar: filled
-    /// icons there (Telegram, coffee pot) measure ~16pt tall, and the marks are dense
-    /// silhouettes of the same kind. Kept whole so the mark lands on exact pixels at 2x.
-    static var markSize: CGFloat = 16
-    /// Clear space between marks. Half the ~20pt rhythm macOS leaves between neighbouring
+enum GlyphRenderer {
+    /// Glyph height in points, sized against the system items sharing the bar: filled
+    /// icons there (Telegram, coffee pot) measure ~16pt tall, and the glyphs are dense
+    /// silhouettes of the same kind. Kept whole so the glyph lands on exact pixels at 2x.
+    static var glyphSize: CGFloat = 16
+    /// Clear space between glyphs. Half the ~20pt rhythm macOS leaves between neighbouring
     /// status items, so the row reads as one item rather than several.
     ///
     /// A gap rather than a center distance, because artwork is fitted by height and a
-    /// wide mark would otherwise overlap its neighbour.
+    /// wide glyph would otherwise overlap its neighbour.
     static var gap: CGFloat = 10
-    /// Ceiling on how wide a single mark may get relative to its height.
+    /// Ceiling on how wide a single glyph may get relative to its height.
     static var maxAspect: CGFloat = 1.8
     /// Overall image height.
     static var height: CGFloat = 18
@@ -55,9 +55,9 @@ enum MarkRenderer {
         return nil
     }
 
-    /// Crops fully transparent margins so every mark is sized by its actual artwork.
+    /// Crops fully transparent margins so every glyph is sized by its actual artwork.
     ///
-    /// Export padding varies wildly between tools, and without this a mark centered in a
+    /// Export padding varies wildly between tools, and without this a glyph centered in a
     /// roomy canvas renders visibly smaller than its neighbours for no reason the author
     /// can see.
     private static func trimmingTransparentEdges(_ image: NSImage) -> NSImage {
@@ -134,18 +134,18 @@ enum MarkRenderer {
 
     // MARK: - Drawing
 
-    /// Drawn size of a mark: artwork is fitted to `markSize` in height, so a wide mark
+    /// Drawn size of a glyph: artwork is fitted to `glyphSize` in height, so a wide glyph
     /// stays legible instead of being shrunk to fit a square.
-    private static func drawnSize(for spec: MarkSpec) -> NSSize {
+    private static func drawnSize(for spec: GlyphSpec) -> NSSize {
         guard let art = artwork(for: spec.key), art.size.height > 0 else {
-            return NSSize(width: markSize, height: markSize)
+            return NSSize(width: glyphSize, height: glyphSize)
         }
         let aspect = min(art.size.width / art.size.height, maxAspect)
-        return NSSize(width: markSize * aspect, height: markSize)
+        return NSSize(width: glyphSize * aspect, height: glyphSize)
     }
 
-    /// Left edge of each mark, spaced by a uniform gap regardless of group membership.
-    private static func layout(_ specs: [MarkSpec]) -> (origins: [CGFloat], sizes: [NSSize], width: CGFloat) {
+    /// Left edge of each glyph, spaced by a uniform gap regardless of group membership.
+    private static func layout(_ specs: [GlyphSpec]) -> (origins: [CGFloat], sizes: [NSSize], width: CGFloat) {
         var origins: [CGFloat] = []
         var sizes: [NSSize] = []
         var x = edgeInset
@@ -158,12 +158,12 @@ enum MarkRenderer {
             sizes.append(drawnSize(for: spec))
         }
 
-        let width = (origins.last ?? edgeInset) + (sizes.last?.width ?? markSize) + edgeInset
+        let width = (origins.last ?? edgeInset) + (sizes.last?.width ?? glyphSize) + edgeInset
         return (origins, sizes, width)
     }
 
-    /// Where each mark lands inside the row image, for hit-testing clicks.
-    static func frames(for specs: [MarkSpec]) -> [NSRect] {
+    /// Where each glyph lands inside the row image, for hit-testing clicks.
+    static func frames(for specs: [GlyphSpec]) -> [NSRect] {
         let (origins, sizes, _) = layout(specs)
         return zip(origins, sizes).map { origin, size in
             NSRect(
@@ -175,9 +175,9 @@ enum MarkRenderer {
         }
     }
 
-    static func rowImage(specs: [MarkSpec], appearance: NSAppearance?) -> NSImage {
+    static func rowImage(specs: [GlyphSpec], appearance: NSAppearance?) -> NSImage {
         let (origins, sizes, rowWidth) = layout(specs)
-        let size = NSSize(width: max(rowWidth, markSize + edgeInset * 2), height: height)
+        let size = NSSize(width: max(rowWidth, glyphSize + edgeInset * 2), height: height)
 
         return NSImage(size: size, flipped: false) { _ in
             for (index, spec) in specs.enumerated() {
@@ -193,7 +193,7 @@ enum MarkRenderer {
         }
     }
 
-    private static func draw(_ spec: MarkSpec, in box: NSRect) {
+    private static func draw(_ spec: GlyphSpec, in box: NSRect) {
         let color = spec.color.withAlphaComponent(spec.alpha)
 
         guard let art = artwork(for: spec.key) else {
@@ -201,7 +201,7 @@ enum MarkRenderer {
             return
         }
 
-        // Fit the artwork's aspect inside the box so non-square marks stay undistorted.
+        // Fit the artwork's aspect inside the box so non-square glyphs stay undistorted.
         let scale = min(box.width / art.size.width, box.height / art.size.height)
         let fitted = NSSize(width: art.size.width * scale, height: art.size.height * scale)
         let target = NSRect(
@@ -225,8 +225,8 @@ enum MarkRenderer {
         NSBezierPath(ovalIn: box).fill()
     }
 
-    /// Small mark used as the leading swatch on each dropdown row.
-    static func swatch(_ spec: MarkSpec) -> NSImage {
+    /// Small glyph used as the leading swatch on each dropdown row.
+    static func swatch(_ spec: GlyphSpec) -> NSImage {
         let size = NSSize(width: 12, height: 12)
         return NSImage(size: size, flipped: false) { _ in
             draw(spec, in: NSRect(x: 1, y: 1, width: 10, height: 10))

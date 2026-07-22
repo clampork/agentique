@@ -184,7 +184,7 @@ enum CmuxBridge {
             // cmux emits a canonical agent tag (`codex`, `claude_code`) plus a per-session
             // sub-tag (`codex.<uuid>`) that carries no lifecycle label. Drop the sub-tag:
             // being written last, it would otherwise overwrite the canonical tag and blank
-            // the label, so the agent never reads as Running — its mark never pulses and a
+            // the label, so the agent never reads as Running — its glyph never pulses and a
             // finished turn never brightens — and its `agentKey` stops matching artwork.
             guard !kind.contains(".") else { continue }
             let label = fields.count >= 7 ? fields[6].trimmingCharacters(in: .whitespaces) : ""
@@ -210,7 +210,7 @@ enum CmuxBridge {
         }
         // cmux flips a session to `running` the moment any input is submitted, including
         // client-only commands like `/clear` that never issue a model turn and so never
-        // complete — leaving the mark pulsing until the next real turn. The transcript is
+        // complete — leaving the glyph pulsing until the next real turn. The transcript is
         // the tiebreaker: only sessions with a live turn stay `working`.
         for (workspaceID, session) in best
         where session.lifecycle == .running && endsWithLocalCommand(session.transcriptPath) {

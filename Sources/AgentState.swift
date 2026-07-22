@@ -8,7 +8,7 @@ enum AgentLifecycle: String {
     case unknown
 }
 
-/// What a single mark in the row is showing.
+/// What a single glyph in the row is showing.
 enum SlotState {
     /// Agent is mid-turn. The only state that animates.
     case working
@@ -68,7 +68,7 @@ struct Workspace {
     let groupID: String?
 }
 
-/// A workspace paired with whatever is running in it — one mark in the row.
+/// A workspace paired with whatever is running in it — one glyph in the row.
 struct AgentSlot {
     let workspace: Workspace
     let session: AgentSession?
@@ -94,7 +94,7 @@ struct AgentSlot {
     }
 
     /// Which vector to draw.
-    var markKey: String {
+    var glyphKey: String {
         session?.agent ?? tag?.agentKey ?? "fallback"
     }
 
@@ -115,19 +115,19 @@ struct AgentSlot {
     }
 }
 
-/// Every mark carries its session color; these fractions separate states by brightness.
+/// Every glyph carries its session color; these fractions separate states by brightness.
 ///
-/// Dimming is done in color, not opacity: a settled mark is a *darker* version of its
+/// Dimming is done in color, not opacity: a settled glyph is a *darker* version of its
 /// session color at full opacity, so it stays true to its hue instead of blending into
 /// the translucent menu bar. An earlier build tinted a working agent in cmux's Amber,
 /// which overrode the session color exactly when you most want to know which project is
 /// busy; identity now always survives, and state rides on brightness and motion.
 enum Palette {
-    /// Finished and not yet looked at — full brightness, the loudest a static mark gets.
+    /// Finished and not yet looked at — full brightness, the loudest a static glyph gets.
     static let full: CGFloat = 1.0
-    /// Finished and already seen — a dimmer static mark that still reads as its own color.
+    /// Finished and already seen — a dimmer static glyph that still reads as its own color.
     static let settled: CGFloat = 0.70
-    /// Floor of the working pulse: a mid-turn mark swings between this and full brightness.
+    /// Floor of the working pulse: a mid-turn glyph swings between this and full brightness.
     static let pulseFloor: CGFloat = 0.35
 
     /// Seconds per full pulse cycle.
@@ -150,7 +150,7 @@ enum CmuxColor {
 
     /// Lifts a workspace color for a dark bar: a brightness floor plus a push toward
     /// white, with a light saturation bump. Tuned to land on the same shades cmux shows
-    /// in dark mode, so a mark reads as the same color as the tab it stands for.
+    /// in dark mode, so a glyph reads as the same color as the tab it stands for.
     static func brightenedForDarkAppearance(_ color: NSColor) -> NSColor {
         let rgb = color.usingColorSpace(.sRGB) ?? color
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
@@ -178,7 +178,7 @@ enum CmuxColor {
     }
 
     /// Dims a color to `fraction` of its brightness, keeping hue and saturation, so a
-    /// dimmed mark reads as a darker version of the same color rather than a transparent
+    /// dimmed glyph reads as a darker version of the same color rather than a transparent
     /// one that blends into the menu bar behind it.
     static func dim(_ color: NSColor, to fraction: CGFloat) -> NSColor {
         let rgb = color.usingColorSpace(.sRGB) ?? color
