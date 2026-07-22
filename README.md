@@ -84,8 +84,8 @@ come from `workspace.group.list` and are filtered out.
 ## Color
 
 Session color is the workspace's `custom_color`, which cmux shares across a group's
-members. It runs through a port of cmux's `brightenedForDarkAppearance`, so the shade
-matches what cmux itself renders in dark mode rather than the raw hex.
+members. On a dark bar it is brightened before drawing, so the shade matches what cmux
+itself renders in dark mode rather than the raw hex.
 
 ## Agent artwork
 

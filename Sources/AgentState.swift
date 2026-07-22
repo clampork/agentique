@@ -148,7 +148,9 @@ enum CmuxColor {
         )
     }
 
-    /// Verbatim port of `WorkspaceTabColorSettings.brightenedForDarkAppearance`.
+    /// Lifts a workspace color for a dark bar: a brightness floor plus a push toward
+    /// white, with a light saturation bump. Tuned to land on the same shades cmux shows
+    /// in dark mode, so a mark reads as the same color as the tab it stands for.
     static func brightenedForDarkAppearance(_ color: NSColor) -> NSColor {
         let rgb = color.usingColorSpace(.sRGB) ?? color
         var hue: CGFloat = 0, saturation: CGFloat = 0, brightness: CGFloat = 0, alpha: CGFloat = 0
@@ -168,7 +170,8 @@ enum CmuxColor {
         )
     }
 
-    /// Port of `WorkspaceTabColorSettings.displayNSColor`.
+    /// The shade to draw a workspace color at, brightened on a dark bar and left alone
+    /// on a light one.
     static func display(hex: String?, isDark: Bool) -> NSColor? {
         guard let base = from(hex: hex) else { return nil }
         return isDark ? brightenedForDarkAppearance(base) : base
