@@ -469,13 +469,21 @@ def make_social():
         card.alpha_composite(image, (x, (bar_h - size) // 2))
         x += image.width + gap
 
-    # Sits a little below the midpoint of the space under the bar: the glyph row carries
-    # visual weight up top, and centring on geometry alone reads as top-heavy.
-    body = bar_h + (height - bar_h) // 2 + 24
-    draw.text((width // 2, body - 46), "Agentique",
-              font=font(116, weight="Bold"), fill=TEXT, anchor="mm")
-    draw.text((width // 2, body + 62), "Every cmux agent, at a glance.",
-              font=font(46, weight="Medium"), fill=(122, 132, 173, 255), anchor="mm")
+    # Centred on the block's measured ink, not on nominal point sizes: a font's ascent and
+    # descent leave uneven slack, so stacking two sizes by eye drifts off centre.
+    title, tagline = "Agentique", "Every cmux agent, at a glance."
+    title_font, tagline_font = font(116, weight="Bold"), font(46, weight="Medium")
+    lead = 30
+
+    t = draw.textbbox((0, 0), title, font=title_font, anchor="mm")
+    s = draw.textbbox((0, 0), tagline, font=tagline_font, anchor="mm")
+    block = (t[3] - t[1]) + lead + (s[3] - s[1])
+    title_y = (height - block) // 2 - t[1]
+    tagline_y = title_y + t[3] + lead - s[1]
+
+    draw.text((width // 2, title_y), title, font=title_font, fill=TEXT, anchor="mm")
+    draw.text((width // 2, tagline_y), tagline, font=tagline_font,
+              fill=(122, 132, 173, 255), anchor="mm")
 
     path = f"{OUT}/social-preview.png"
     card.convert("RGB").save(path)
