@@ -56,9 +56,11 @@ Four source files with a strict layering—cmux I/O, domain model, controller, d
 - **Only live signals decide state.** Hook files keep finished sessions for restore; a dead pid must never resurrect a Workspace as a live agent. A Workspace with no session and no tag has never loaded an agent and is hidden entirely.
 - **Workspace Groups are excluded.** cmux models a Group as a Workspace that anchors it, so `workspace list` returns both indistinguishably; `workspace.group.list` supplies the anchors to filter out. Group membership still rides on `GlyphSpec.groupID` but no longer affects layout—it only feeds the redraw signature.
 
-## Docs that quote constants
+## Where the docs live
 
-Three files restate values that live in the Swift: `README.md` (state table, sizing, artwork specs), `Tools/make-demo.py` (geometry and `Palette`, to draw the README media), and this file. `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/GlyphRenderer.swift` are the source of truth. Changing either means updating all three and re-running `make-demo.py`; this has drifted before.
+`README.md` is task-oriented: what it is, install, configure, use, customize, develop. `DESIGN.md` holds the internals and the rationale—where each signal comes from, the color matching, and the rejected alternatives. Keep rationale out of the README; it was extracted once already.
+
+Four files restate values that live in the Swift: `README.md` (state table, sizing, artwork specs), `DESIGN.md` (the refresh cadences), `Tools/make-demo.py` (geometry and `Palette`, to draw the README media), and this file. `Palette` in `Sources/AgentState.swift` and the sizing block in `Sources/GlyphRenderer.swift` are the source of truth. Changing either means updating all four and re-running `make-demo.py`; this has drifted before.
 
 ## Releasing
 

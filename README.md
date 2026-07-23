@@ -1,10 +1,6 @@
 <h1 align="center">Agentique</h1>
 
 <p align="center">
-  <img src="docs/pulse.png" width="334" alt="A row of colored glyphs; two pulse while their agents work.">
-</p>
-
-<p align="center">
   <b>Every <a href="https://www.cmux.dev/">cmux</a> agent, at a glance.</b>
 </p>
 
@@ -20,15 +16,15 @@
 </p>
 
 <p align="center">
-  <sub>An agent finishes while you are elsewhere. Its glyph brightens; one click lands you in that Workspace.</sub>
+  <sub>An agent finishes while you are elsewhere. Its glyph brightens, and one click lands you in that Workspace.</sub>
 </p>
 
 ## Why
 
 The menu bar is the one strip of screen no window covers. Agentique puts your agents
 there, so cmux can sit behind your editor or your browser while you work. A glance tells
-you which Workspaces are still thinking and which one has stopped and is waiting on you;
-clicking its glyph drops you straight into that Workspace.
+you which Workspaces are still working and which ones have stopped and are waiting on you.
+Clicking a glyph drops you straight into its Workspace.
 
 ## What the glyphs mean
 
@@ -45,10 +41,10 @@ which a Workspace Group shares across its members, so a busy project stays recog
 
 | Condition | Treatment |
 | --- | --- |
-| Agent mid-turn | pulsing |
-| Turn finished, not yet seen | full brightness |
-| Turn finished, already visited | dimmed |
-| Plain terminal, no agent ever loaded | hidden |
+| Agent mid-turn | Pulsing |
+| Turn finished, not yet seen | Full brightness |
+| Turn finished, already visited | Dimmed |
+| Plain terminal, no agent ever loaded | Hidden |
 
 Glyphs dim by color rather than opacity, so a resting one is a darker shade of itself
 instead of a translucent one bleeding into the bar behind it.
@@ -117,9 +113,8 @@ which tells the two apart.
 
 ## Using it
 
-Click a glyph to jump to its Workspace. Click the padding around them, or right-click
-anywhere on the item, for the Workspace list. The status item has no attached menu on
-purpose, since that would make every click open the list.
+Click a glyph to jump to its Workspace. Right-click, or click the padding around the
+glyphs, to bring up the Workspace list. That's it.
 
 ## Custom agent artwork
 
@@ -139,63 +134,10 @@ so anything under 2px, roughly 16px in a 256px frame, disappears.
 
 ## How it works
 
-### Where state comes from
-
-- **Lifecycle**—`~/.cmuxterm/<agent>-hook-sessions.json`, written by the cmux agent hooks.
-  Each session carries `agentLifecycle` (`running` | `idle` | `needsInput` | `unknown`),
-  `workspaceId` and `pid`. Entries count only while the pid is alive.
-- **Agent identity**—the hook filename.
-- **Whether an agent is loaded at all**—`cmux top --all --processes` emits a per-Workspace
-  tag row (`workspace:<uuid>:tag:claude_code`) labelled `Running` or `Idle`. A Workspace
-  running only a shell emits none, which is what separates a plain terminal from one whose
-  agent exited.
-- **Names, order and color**—`cmux workspace list --json --id-format both`, per window.
-- **Change detection**—a `DispatchSource` watch on `~/.cmuxterm`, debounced 120ms, with a
-  2s poll behind it. The hook files are replaced atomically, so the directory is what
-  changes. Workspaces, Workspace Groups and tags refresh every 10s, since `cmux top`
-  samples CPU.
-
-`cmux events --category agent --reconnect` carries the same information plus
-`workspace_id`. The session files already hold the resolved lifecycle, so watching them
-avoids re-deriving state and keeps a subprocess out of the picture.
-
-Only live signals count. Hook files keep finished sessions around for restore, so a
-Workspace whose agent exited days ago still has history on disk. Trusting it resurrected
-dead Workspaces as live agents, which is why nothing but a live session or a live cmux tag
-counts now.
-
-### Color
-
-The session color is the Workspace's `custom_color`, which cmux shares across a Workspace
-Group's members. On a dark bar it is brightened first, so the shade matches what cmux
-renders in dark mode rather than the raw hex.
-
-### Design decisions
-
-There is no dimmer "stopped" tier. One existed briefly, reachable only when a session's
-process was alive while its lifecycle was `unknown` *and* cmux emitted no tag, which
-essentially never fires. Every visible glyph is a live agent, so the two static levels
-differ only by whether you have looked at it.
-
-An earlier build tinted working agents in cmux's Amber. It overrode the session color
-exactly when you most want to know *which* project is busy.
-
-A Workspace that has never loaded an agent is left out: the row is about agents, and a
-plain shell has nothing to report.
-
-"Finished" and "waiting on you" are not separated, because for a coding agent they are the
-same thing: a finished turn *is* the agent waiting. What is separated is whether you have
-*seen* it. A turn ending while you look elsewhere stays bright until you visit that
-Workspace; one finishing while you watch never brightens. An earlier build drove this off
-unread cmux notifications (`rpc notification.list`, `is_read == false`), the hook to
-restore if visiting proves too blunt.
-
-Workspace Groups are filtered out. cmux models a Group as a Workspace that anchors it, so
-`workspace list` returns both indistinguishably; the anchors come from
-`workspace.group.list`.
-
-`render()` compares a signature of the row before touching the image, so refreshes that
-produce an identical row cost nothing.
+Lifecycle comes from the cmux agent hooks, and whether a Workspace has an agent at all
+comes from cmux's own process tags. Only live signals count, so every visible glyph is a
+live agent. [DESIGN.md](DESIGN.md) covers each signal in detail, how the colors are
+matched to cmux, and why the state model settled where it did.
 
 ## Development
 
@@ -225,7 +167,7 @@ Supporting scripts, run from the repository root:
 ```sh
 uv run --with pillow python3 Tools/preview-glyphs.py   # every glyph at true menu bar size
 uv run --with pillow python3 Tools/preview-opacity.py  # compare resting-brightness candidates
-uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png
+uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png and docs/click.png
 swift Tools/rasterize.swift <in.svg|pdf> <out.png> <height>
 swift Tools/make-icon.swift                            # regenerate Assets/AppIcon.icns
 ```
@@ -236,3 +178,8 @@ so judge legibility on the actual-size render, not the magnified one.
 ## License
 
 [MIT](LICENSE). An independent project, not affiliated with cmux.
+
+<br>
+<p align="center">
+  <img src="docs/pulse.png" width="334" alt="A row of colored glyphs; two pulse while their agents work.">
+</p>
