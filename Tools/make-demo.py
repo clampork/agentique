@@ -39,7 +39,7 @@ FULL, SETTLED, PULSE_FLOOR = 1.0, 0.70, 0.35
 PULSE_PERIOD = 1.4
 
 # Tokyo Night accents, the colors cmux assigns to Workspaces.
-BLUE, GREEN, PURPLE, ROSE = "#7DCFFF", "#9ECE6A", "#BB9AF7", "#F7768E"
+BLUE, GREEN, PURPLE, ROSE, ORANGE = "#7DCFFF", "#9ECE6A", "#BB9AF7", "#F7768E", "#FF9E64"
 
 # (artwork, color, state) per glyph. Two projects are mid-turn, one finished while you
 # were looking elsewhere, the rest are settled.
@@ -152,27 +152,46 @@ MUTED = (86, 95, 137, 255)
 BAR = (28, 28, 32, 255)
 PAGE = (13, 17, 23, 0)
 
-# Sidebar contents, in row order, matching ROW above. Names are invented.
+# Sidebar contents, in row order. Names are invented, and every one is somewhere an agent
+# would plausibly be running.
+#
+# Ungrouped Workspaces come first on purpose: every row shares one indent level, so a
+# Workspace listed below a group header would otherwise read as belonging to it.
 # (label, color, group). A group of None means the Workspace sits on its own.
 TREE = [
-    ("marketing-site", BLUE, "Website"),
-    ("docs", BLUE, "Website"),
-    ("api-server", GREEN, None),
-    ("scratch", PURPLE, None),
-    ("infra", ROSE, "Platform"),
-    ("deploy", ROSE, "Platform"),
+    ("docs", PURPLE, None),
+    ("infra", ROSE, None),
+    ("vault", ORANGE, None),
+    ("web", BLUE, "Storefront"),
+    ("checkout", BLUE, "Storefront"),
+    ("api", GREEN, "Platform"),
+    ("billing", GREEN, "Platform"),
 ]
+
+# The menu bar row for the mock, in the same order. A different mix of agents and colors
+# from ROW above, so the two README images do not look like one screenshot used twice.
+MOCK_ROW = [
+    ("codex", PURPLE, "seen"),
+    ("claude", ROSE, "seen"),
+    ("claude", ORANGE, "seen"),
+    ("claude", BLUE, "seen"),
+    ("codex", BLUE, "unseen"),      # checkout: finished while you were elsewhere
+    ("claude", GREEN, "working"),   # api: what you are watching
+    ("codex", GREEN, "seen"),
+]
+
+WATCHING, FINISHED = 5, 4
 
 # Terminal body per Workspace, keyed by row index.
 TRANSCRIPTS = {
-    0: [("muted", "$ claude"),
-        ("text", "› rewrite the pricing page copy"),
-        ("muted", "  edited src/pages/pricing.tsx"),
-        ("run", "  working…")],
-    2: [("muted", "$ claude"),
-        ("text", "› add rate limiting to /v1/search"),
-        ("muted", "  edited api/search.go, api/limit.go"),
-        ("done", "  done, 3 files changed")],
+    WATCHING: [("muted", "$ claude"),
+               ("text", "› add rate limiting to /v1/search"),
+               ("muted", "  edited api/search.go, api/limit.go"),
+               ("run", "  working…")],
+    FINISHED: [("muted", "$ claude"),
+               ("text", "› fix the coupon rounding bug"),
+               ("muted", "  edited checkout/total.ts"),
+               ("done", "  done, 3 files changed")],
 }
 
 
@@ -198,21 +217,50 @@ def cursor(draw, x, y, click):
     draw.polygon(arrow, fill=(255, 255, 255, 255), outline=(0, 0, 0, 180))
 
 
+ROW_H, HEADER_H, GROUP_LEAD = 20 * MOCK, 15 * MOCK, 10 * MOCK
+
+
+def sidebar_rows(top):
+    """Top y for every Workspace row, plus (label, y) for each group header, and the y
+    the list ends at.
+
+    Rows all sit at one indent, so hierarchy is carried by the header's typography
+    rather than by pushing members to the right.
+    """
+    rows, headers = [], []
+    y = top
+    seen = set()
+    for _, _, group in TREE:
+        if group and group not in seen:
+            seen.add(group)
+            y += GROUP_LEAD
+            headers.append((group, y))
+            y += HEADER_H
+        rows.append(y)
+        y += ROW_H
+    return rows, headers, y
+
+
 def mock_frame(phase, selected, cursor_xy, click):
-    """One frame of the cmux mock: menu bar on top, window below."""
-    width, height = 460 * MOCK, 244 * MOCK
-    bar_h, win_y = 26 * MOCK, 34 * MOCK
+    """One frame of the cmux mock: menu bar on top, cmux window below."""
+    bar_h, win_y = 24 * MOCK, 32 * MOCK
+    # Height follows the sidebar rather than a guess, so adding a Workspace cannot crop
+    # the list or leave a band of dead space under it.
+    rows, headers, list_end = sidebar_rows(win_y + 36 * MOCK)
+    width = 460 * MOCK
+    height = list_end + 22 * MOCK
     canvas = Image.new("RGBA", (width, height), PAGE)
     draw = ImageDraw.Draw(canvas)
 
-    # Menu bar, with the glyph row sitting where a status item would.
+    # Menu bar, with the glyph row sitting where a status item would. Visiting a
+    # Workspace settles a finished glyph, but a mid-turn one keeps pulsing.
     draw.rectangle([0, 0, width, bar_h], fill=BAR)
-    size, gap = 15 * MOCK, 9 * MOCK
-    states = [(key, color, "seen" if i == selected else state)
-              for i, (key, color, state) in enumerate(ROW)]
+    size, gap = 12 * MOCK, 7 * MOCK
+    states = [(key, color, "seen" if i == selected and state == "unseen" else state)
+              for i, (key, color, state) in enumerate(MOCK_ROW)]
     glyphs = [glyph(key, color, fraction_for(state, phase), size) for key, color, state in states]
     row_w = sum(g.width for g in glyphs) + gap * (len(glyphs) - 1)
-    x = width - row_w - 18 * MOCK
+    x = width - row_w - 16 * MOCK
     origins = []
     for image in glyphs:
         origins.append(x)
@@ -225,39 +273,36 @@ def mock_frame(phase, selected, cursor_xy, click):
     draw.rounded_rectangle([win[0], win[1], win[2], win[1] + 24 * MOCK], radius=8 * MOCK, fill=TITLEBAR)
     draw.rectangle([win[0], win[1] + 16 * MOCK, win[2], win[1] + 24 * MOCK], fill=TITLEBAR)
     for i, dot in enumerate([(255, 95, 87), (255, 189, 46), (39, 201, 63)]):
-        cx = win[0] + (14 + i * 15) * MOCK
-        cy = win[1] + 12 * MOCK
+        cx, cy = win[0] + (14 + i * 15) * MOCK, win[1] + 12 * MOCK
         draw.ellipse([cx - 4 * MOCK, cy - 4 * MOCK, cx + 4 * MOCK, cy + 4 * MOCK], fill=dot + (255,))
 
     # Sidebar.
-    side_w = 132 * MOCK
+    side_w = 126 * MOCK
     draw.rectangle([win[0], win[1] + 24 * MOCK, win[0] + side_w, win[3]], fill=SIDEBAR)
 
     ui, mono, small = font(11 * MOCK), font(10 * MOCK, mono=True), font(8 * MOCK)
-    y = win[1] + 34 * MOCK
-    seen_groups = set()
-    for index, (label, color, group) in enumerate(TREE):
-        if group and group not in seen_groups:
-            seen_groups.add(group)
-            draw.text((win[0] + 14 * MOCK, y), group.upper(), font=small, fill=MUTED)
-            y += 15 * MOCK
-        indent = 24 * MOCK if group else 14 * MOCK
+    for label, y in headers:
+        draw.text((win[0] + 14 * MOCK, y), label.upper(), font=small, fill=MUTED)
+
+    for index, ((label, color, _), y) in enumerate(zip(TREE, rows)):
         if index == selected:
             draw.rounded_rectangle(
-                [win[0] + 8 * MOCK, y - 3 * MOCK, win[0] + side_w - 8 * MOCK, y + 15 * MOCK],
+                [win[0] + 7 * MOCK, y - 3 * MOCK, win[0] + side_w - 7 * MOCK, y + 15 * MOCK],
                 radius=4 * MOCK, fill=SELECTED,
             )
-        dot = dimmed(color, 1.0)
-        draw.ellipse([win[0] + indent, y + 4 * MOCK, win[0] + indent + 7 * MOCK, y + 11 * MOCK], fill=dot)
-        draw.text((win[0] + indent + 13 * MOCK, y), label, font=ui,
+        # cmux marks a Workspace's color as a bar down its leading edge, not a bullet.
+        draw.rounded_rectangle(
+            [win[0] + 12 * MOCK, y + 1 * MOCK, win[0] + 15 * MOCK, y + 12 * MOCK],
+            radius=1 * MOCK, fill=dimmed(color, 1.0),
+        )
+        draw.text((win[0] + 23 * MOCK, y), label, font=ui,
                   fill=TEXT if index == selected else MUTED)
-        y += 20 * MOCK
 
     # Terminal.
     tx, ty = win[0] + side_w + 16 * MOCK, win[1] + 38 * MOCK
     palette = {"muted": MUTED, "text": TEXT,
                "run": dimmed(BLUE, 1.0), "done": dimmed(GREEN, 1.0)}
-    for kind, line in TRANSCRIPTS.get(selected, TRANSCRIPTS[0]):
+    for kind, line in TRANSCRIPTS[selected]:
         draw.text((tx, ty), line, font=mono, fill=palette[kind])
         ty += 20 * MOCK
 
@@ -268,11 +313,10 @@ def mock_frame(phase, selected, cursor_xy, click):
 
 def make_click():
     """Cursor travels to the finished agent's glyph, clicks, and the Workspace switches."""
-    target_index = 2
     # Probe one frame for the glyph origins, so the cursor aims at the real thing.
-    _, origins, bar_h = mock_frame(1.0, 0, None, 0)
-    target = (origins[target_index] + 7 * MOCK, bar_h // 2)
-    start = (300 * MOCK, 150 * MOCK)
+    _, origins, bar_h = mock_frame(1.0, WATCHING, None, 0)
+    target = (origins[FINISHED] + 6 * MOCK, bar_h // 2)
+    start = (300 * MOCK, 170 * MOCK)
 
     steps = [
         ("hold", 6, 0),      # the finished agent sits there at full brightness
@@ -287,17 +331,17 @@ def make_click():
         for step in range(count):
             phase = 0.5 + 0.5 * math.sin(2 * math.pi * i / (total | 1))
             if kind == "hold":
-                pos, click, selected = start, 0, 0
+                pos, click, selected = start, 0, WATCHING
             elif kind == "move":
                 # Ease-out so the cursor decelerates onto the glyph.
                 t = 1 - (1 - (step + 1) / count) ** 3
                 pos = (start[0] + (target[0] - start[0]) * t,
                        start[1] + (target[1] - start[1]) * t)
-                click, selected = 0, 0
+                click, selected = 0, WATCHING
             elif kind == "click":
-                pos, click, selected = target, (step + 1) / count, 0
+                pos, click, selected = target, (step + 1) / count, WATCHING
             else:
-                pos, click, selected = target, 0, target_index
+                pos, click, selected = target, 0, FINISHED
             frame, _, _ = mock_frame(phase, selected, pos, click)
             frames.append(frame)
             i += 1
