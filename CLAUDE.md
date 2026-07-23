@@ -25,7 +25,7 @@ build/Agentique.app/Contents/MacOS/Agentique --version         # reads CFBundleS
 
 CI (`.github/workflows/ci.yml`) can only build and run `--version`/`--help`: a runner has no cmux, so `--dump` and `--preview` have nothing to report.
 
-Artwork tooling (per the global Python rule, always via `uv`):
+Artwork tooling. Always run Python through `uv`; never call `pip` or `python3` directly:
 
 ```
 uv run --with pillow python3 Tools/preview-glyphs.py   # every glyph at true menu bar size → ~/Desktop
