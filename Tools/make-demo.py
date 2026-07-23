@@ -7,8 +7,9 @@ Writes two APNGs:
 
   docs/pulse.png  the glyph row over one full pulse cycle, on a transparent background so
                   it sits on either GitHub theme
-  docs/click.png  a mock of cmux under the menu bar, showing a click on a finished agent's
-                  glyph landing in that Workspace
+  docs/click.png  a mock of cmux under the menu bar, running the whole loop: a prompt is
+                  typed and sent, its glyph starts breathing, another Workspace pulls you
+                  away, and the finished agent's glyph brings you back
 
 Both are synthetic. The README should look the same on every machine, a real row would
 leak whichever projects happened to be open, and the mock needs no cmux running to
@@ -52,7 +53,7 @@ ROW = [
     ("claude", ROSE, "seen"),
 ]
 
-FPS = 20
+PULSE_FPS = 20
 OUT = "docs"
 
 
@@ -132,7 +133,7 @@ def row_frame(phase, size=GLYPH, gap=GAP, pad_y=PAD_Y):
 def make_pulse():
     # Forced odd: over an even count a sine hits every value twice, and Pillow's APNG
     # writer mangles the frame sequence when it tries to fold those duplicates away.
-    count = round(PULSE_PERIOD * FPS) | 1
+    count = round(PULSE_PERIOD * PULSE_FPS) | 1
     frames = [row_frame(0.5 + 0.5 * math.sin(2 * math.pi * i / count)) for i in range(count)]
     save_apng(frames, f"{OUT}/pulse.png", round(PULSE_PERIOD * 1000 / count))
 
@@ -168,31 +169,54 @@ TREE = [
     ("billing", GREEN, "Platform"),
 ]
 
-# The menu bar row for the mock, in the same order. A different mix of agents and colors
-# from ROW above, so the two README images do not look like one screenshot used twice.
+DOCS, INFRA, VAULT, WEB, CHECKOUT, API, BILLING = range(len(TREE))
+
+# Which agent each Workspace runs, in the same order. A different mix of agents and
+# colors from ROW above, so the two README images do not look like one screenshot twice.
+# State is not baked in here: the timeline decides it per frame.
 MOCK_ROW = [
-    ("codex", PURPLE, "seen"),
-    ("claude", ROSE, "seen"),
-    ("claude", ORANGE, "seen"),
-    ("claude", BLUE, "seen"),
-    ("codex", BLUE, "unseen"),      # checkout: finished while you were elsewhere
-    ("claude", GREEN, "working"),   # api: what you are watching
-    ("codex", GREEN, "seen"),
+    ("codex", PURPLE),
+    ("claude", ROSE),
+    ("claude", ORANGE),
+    ("claude", BLUE),
+    ("codex", BLUE),
+    ("claude", GREEN),
+    ("codex", GREEN),
 ]
 
-WATCHING, FINISHED = 5, 4
+API_PROMPT = "add rate limiting to /v1/search"
 
-# Terminal body per Workspace, keyed by row index.
-TRANSCRIPTS = {
-    WATCHING: [("muted", "$ claude"),
-               ("text", "› add rate limiting to /v1/search"),
-               ("muted", "  edited api/search.go, api/limit.go"),
-               ("run", "  working…")],
-    FINISHED: [("muted", "$ claude"),
-               ("text", "› fix the coupon rounding bug"),
-               ("muted", "  edited checkout/total.ts"),
-               ("done", "  done, 3 files changed")],
-}
+CHECKOUT_TERMINAL = [
+    ("muted", "$ claude"),
+    ("text", "› fix the coupon rounding bug"),
+    ("muted", "  edited checkout/total.ts"),
+    ("done", "  done, 3 files changed"),
+]
+
+
+def api_terminal(stage, typed=0):
+    """The api Workspace's pane at each point in its turn."""
+    lines = [("muted", "$ claude")]
+    if stage == "typing":
+        lines.append(("caret", "› " + API_PROMPT[:typed]))
+    else:
+        lines.append(("text", "› " + API_PROMPT))
+        if stage == "working":
+            lines.append(("run", "  working…"))
+        else:
+            lines.append(("muted", "  edited api/search.go, api/limit.go"))
+            lines.append(("done", "  done, 3 files changed"))
+    return lines
+
+
+def glyph_states(working=(), waiting=()):
+    """Every glyph settled, except those named as mid-turn or finished-but-unseen."""
+    states = ["seen"] * len(MOCK_ROW)
+    for index in working:
+        states[index] = "working"
+    for index in waiting:
+        states[index] = "unseen"
+    return states
 
 
 def font(size, mono=False):
@@ -241,7 +265,7 @@ def sidebar_rows(top):
     return rows, headers, y
 
 
-def mock_frame(phase, selected, cursor_xy, click):
+def mock_frame(phase, selected, states, terminal, cursor_xy, click):
     """One frame of the cmux mock: menu bar on top, cmux window below."""
     bar_h, win_y = 24 * MOCK, 32 * MOCK
     # Height follows the sidebar rather than a guess, so adding a Workspace cannot crop
@@ -252,13 +276,11 @@ def mock_frame(phase, selected, cursor_xy, click):
     canvas = Image.new("RGBA", (width, height), PAGE)
     draw = ImageDraw.Draw(canvas)
 
-    # Menu bar, with the glyph row sitting where a status item would. Visiting a
-    # Workspace settles a finished glyph, but a mid-turn one keeps pulsing.
+    # Menu bar, with the glyph row sitting where a status item would.
     draw.rectangle([0, 0, width, bar_h], fill=BAR)
     size, gap = 12 * MOCK, 7 * MOCK
-    states = [(key, color, "seen" if i == selected and state == "unseen" else state)
-              for i, (key, color, state) in enumerate(MOCK_ROW)]
-    glyphs = [glyph(key, color, fraction_for(state, phase), size) for key, color, state in states]
+    glyphs = [glyph(key, color, fraction_for(state, phase), size)
+              for (key, color), state in zip(MOCK_ROW, states)]
     row_w = sum(g.width for g in glyphs) + gap * (len(glyphs) - 1)
     x = width - row_w - 16 * MOCK
     origins = []
@@ -300,10 +322,15 @@ def mock_frame(phase, selected, cursor_xy, click):
 
     # Terminal.
     tx, ty = win[0] + side_w + 16 * MOCK, win[1] + 38 * MOCK
-    palette = {"muted": MUTED, "text": TEXT,
+    palette = {"muted": MUTED, "text": TEXT, "caret": TEXT,
                "run": dimmed(BLUE, 1.0), "done": dimmed(GREEN, 1.0)}
-    for kind, line in TRANSCRIPTS[selected]:
+    for kind, line in terminal:
         draw.text((tx, ty), line, font=mono, fill=palette[kind])
+        if kind == "caret":
+            # Drawn as a rectangle rather than a block character, so it does not depend
+            # on the monospace font shipping one.
+            caret_x = tx + draw.textlength(line, font=mono) + 2 * MOCK
+            draw.rectangle([caret_x, ty + 1 * MOCK, caret_x + 4 * MOCK, ty + 15 * MOCK], fill=TEXT)
         ty += 20 * MOCK
 
     if cursor_xy:
@@ -311,41 +338,89 @@ def mock_frame(phase, selected, cursor_xy, click):
     return canvas, origins, bar_h
 
 
-def make_click():
-    """Cursor travels to the finished agent's glyph, clicks, and the Workspace switches."""
-    # Probe one frame for the glyph origins, so the cursor aims at the real thing.
-    _, origins, bar_h = mock_frame(1.0, WATCHING, None, 0)
-    target = (origins[FINISHED] + 6 * MOCK, bar_h // 2)
-    start = (300 * MOCK, 170 * MOCK)
+MOCK_FPS = 16
+TICK = 1 / MOCK_FPS
+TYPE_SPEED = 0.05      # seconds per character
+MOVE_TIME = 0.7        # seconds for the cursor to travel
+CLICK_TIME = 0.25      # seconds for the click ring to expand
 
-    steps = [
-        ("hold", 6, 0),      # the finished agent sits there at full brightness
-        ("move", 12, 0),     # cursor travels up to its glyph
-        ("click", 5, 1),     # ring
-        ("after", 14, 2),    # Workspace switched, glyph settled
-    ]
-    frames = []
-    i = 0
-    total = sum(n for _, n, _ in steps)
-    for kind, count, _ in steps:
-        for step in range(count):
-            phase = 0.5 + 0.5 * math.sin(2 * math.pi * i / (total | 1))
-            if kind == "hold":
-                pos, click, selected = start, 0, WATCHING
-            elif kind == "move":
-                # Ease-out so the cursor decelerates onto the glyph.
-                t = 1 - (1 - (step + 1) / count) ** 3
-                pos = (start[0] + (target[0] - start[0]) * t,
-                       start[1] + (target[1] - start[1]) * t)
-                click, selected = 0, WATCHING
-            elif kind == "click":
-                pos, click, selected = target, (step + 1) / count, WATCHING
-            else:
-                pos, click, selected = target, 0, FINISHED
-            frame, _, _ = mock_frame(phase, selected, pos, click)
-            frames.append(frame)
-            i += 1
-    save_apng(frames, f"{OUT}/click.png", round(1000 / FPS))
+
+def make_click():
+    """The full loop: type a prompt, watch it run, get pulled away, and come back.
+
+    Frames carry their own durations, so a beat where nothing moves costs one frame
+    rather than a second's worth of identical ones.
+    """
+    # Probe one frame for the glyph origins, so the cursor aims at the real thing.
+    _, origins, bar_h = mock_frame(1.0, API, glyph_states(), api_terminal("working"), None, 0)
+    at_checkout = (origins[CHECKOUT] + 6 * MOCK, bar_h // 2)
+    at_api = (origins[API] + 6 * MOCK, bar_h // 2)
+    rest = (300 * MOCK, 176 * MOCK)
+
+    frames, durations = [], []
+    elapsed = 0.0
+
+    def push(seconds, selected, states, terminal, cursor_xy, click=0):
+        """One frame, held for `seconds`. The pulse runs off wall-clock time, so it stays
+        continuous across beats of different lengths."""
+        nonlocal elapsed
+        phase = 0.5 + 0.5 * math.sin(2 * math.pi * elapsed / PULSE_PERIOD)
+        frame, _, _ = mock_frame(phase, selected, states, terminal, cursor_xy, click)
+        frames.append(frame)
+        durations.append(round(seconds * 1000))
+        elapsed += seconds
+
+    def travel(start, end, step, count):
+        """Ease-out, so the cursor decelerates onto its target."""
+        t = 1 - (1 - (step + 1) / count) ** 3
+        return (start[0] + (end[0] - start[0]) * t, start[1] + (end[1] - start[1]) * t)
+
+    def beat(seconds, selected, states, terminal, cursor_xy):
+        """Hold. Animated only while something is mid-turn; otherwise a single frame."""
+        if "working" not in states:
+            push(seconds, selected, states, terminal, cursor_xy)
+            return
+        for _ in range(round(seconds / TICK)):
+            push(TICK, selected, states, terminal, cursor_xy)
+
+    idle_but_checkout = glyph_states(waiting=[CHECKOUT])
+    api_running = glyph_states(working=[API], waiting=[CHECKOUT])
+
+    # 1. Typing the prompt into api. Everything is settled except checkout, which
+    #    finished while you were not looking.
+    for typed in range(len(API_PROMPT) + 1):
+        push(TYPE_SPEED, API, idle_but_checkout, api_terminal("typing", typed), rest)
+    beat(0.6, API, idle_but_checkout, api_terminal("typing", len(API_PROMPT)), rest)
+
+    # 2. Enter. The turn starts and api's glyph begins to breathe.
+    beat(2.0, API, api_running, api_terminal("working"), rest)
+
+    # 3. Pulled away: click checkout's bright glyph and land in that Workspace.
+    steps = round(MOVE_TIME / TICK)
+    for step in range(steps):
+        push(TICK, API, api_running, api_terminal("working"), travel(rest, at_checkout, step, steps))
+    clicks = round(CLICK_TIME / TICK)
+    for step in range(clicks):
+        push(TICK, API, api_running, api_terminal("working"), at_checkout, (step + 1) / clicks)
+    # Visiting settles checkout; api keeps pulsing, because it is still mid-turn.
+    beat(2.0, CHECKOUT, glyph_states(working=[API]), CHECKOUT_TERMINAL, at_checkout)
+
+    # 4. api finishes while you are in checkout, so its glyph goes bright and static.
+    api_done = glyph_states(waiting=[API])
+    beat(2.0, CHECKOUT, api_done, CHECKOUT_TERMINAL, at_checkout)
+    for step in range(steps):
+        push(TICK, CHECKOUT, api_done, CHECKOUT_TERMINAL, travel(at_checkout, at_api, step, steps))
+    for step in range(clicks):
+        push(TICK, CHECKOUT, api_done, CHECKOUT_TERMINAL, at_api, (step + 1) / clicks)
+
+    # Back in api, its result on screen and its glyph settled.
+    for step in range(steps):
+        push(TICK, API, glyph_states(), api_terminal("done"), travel(at_api, rest, step, steps))
+    beat(1.6, API, glyph_states(), api_terminal("done"), rest)
+    # checkout's agent finishes again, which is what sends the loop back to the top.
+    beat(1.6, API, idle_but_checkout, api_terminal("done"), rest)
+
+    save_apng(frames, f"{OUT}/click.png", durations)
 
 
 def main():

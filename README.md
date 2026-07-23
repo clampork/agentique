@@ -32,8 +32,16 @@ clicking its glyph drops you straight into that Workspace.
 
 ## What the glyphs mean
 
-Color is identity, never state. Every glyph is drawn in its Workspace's cmux color, so a
-busy project stays recognizable as *that* project. State rides on brightness and motion:
+A glyph carries three things at once.
+
+**Shape is the agent.** A Workspace running Claude Code draws differently from one running
+Codex, so you can see which agent is on which job without reading a label.
+
+**Color is the project, never the state.** Every glyph takes its Workspace's cmux color,
+which a Workspace Group shares across its members, so a busy project stays recognizable as
+*that* project.
+
+**Brightness and motion are the state.**
 
 | Condition | Treatment |
 | --- | --- |
