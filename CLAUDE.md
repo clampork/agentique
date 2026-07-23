@@ -37,6 +37,8 @@ swift Tools/make-icon.swift                            # regenerate Assets/AppIc
 
 `make-demo.py` is entirely synthetic—an invented Workspace row and a hand-drawn cmux mock—so the README renders identically everywhere, no real project names leak, and the images regenerate without cmux running. Its geometry and `Palette` constants are copied from the Swift and must be updated alongside it.
 
+It also writes `docs/social-preview.png`, the 1280x640 card GitHub shows when the repo URL is pasted somewhere. Open Graph previews are static on every major platform, so this can never be the animation. There is no API for the setting: after regenerating, it must be re-uploaded under Settings > General > Social preview.
+
 Runtime diagnostics land in `~/Library/Logs/Agentique.log` (slot count, status item placement, cmux command failures).
 
 ## Architecture

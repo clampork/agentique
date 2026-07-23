@@ -3,13 +3,15 @@
 
     uv run --with pillow python3 Tools/make-demo.py
 
-Writes two APNGs:
+Writes two APNGs and a still:
 
-  docs/pulse.png  the glyph row over one full pulse cycle, on a transparent background so
-                  it sits on either GitHub theme
-  docs/click.png  a mock of cmux under the menu bar, running the whole loop: a prompt is
-                  typed and sent, its glyph starts breathing, another Workspace pulls you
-                  away, and the finished agent's glyph brings you back
+  docs/pulse.png           the glyph row over one full pulse cycle, on a transparent
+                           background so it sits on either GitHub theme
+  docs/click.png           a mock of cmux under the menu bar, running the whole loop: a
+                           prompt is typed and sent, its glyph starts breathing, another
+                           Workspace pulls you away, and the finished agent's glyph
+                           brings you back
+  docs/social-preview.png  the 1280x640 card for GitHub's Social preview setting
 
 Both are synthetic. The README should look the same on every machine, a real row would
 leak whichever projects happened to be open, and the mock needs no cmux running to
@@ -219,9 +221,19 @@ def glyph_states(working=(), waiting=()):
     return states
 
 
-def font(size, mono=False):
+def font(size, mono=False, weight=None):
     path = "/System/Library/Fonts/Menlo.ttc" if mono else "/System/Library/Fonts/SFNS.ttf"
-    return ImageFont.truetype(path, size) if os.path.exists(path) else ImageFont.load_default()
+    if not os.path.exists(path):
+        return ImageFont.load_default()
+    face = ImageFont.truetype(path, size)
+    if weight:
+        # SF Pro ships as a variable font; pick the named instance rather than faking
+        # bold by overdrawing.
+        try:
+            face.set_variation_by_name(weight)
+        except (OSError, AttributeError):
+            pass
+    return face
 
 
 def cursor(draw, x, y, click):
@@ -423,10 +435,58 @@ def make_click():
     save_apng(frames, f"{OUT}/click.png", durations)
 
 
+# ---------------------------------------------------------------------- the social card
+
+# GitHub's documented size for a repository social preview.
+CARD = (1280, 640)
+
+
+def make_social():
+    """The still shown when the repo URL is pasted into Slack, X, Discord and friends.
+
+    Open Graph previews are static everywhere that matters, so this cannot be the
+    animation; it is a card built to stay legible at thumbnail size instead. Upload it
+    under Settings > General > Social preview, which has no API.
+    """
+    width, height = CARD
+    card = Image.new("RGBA", CARD, (26, 27, 38, 255))
+    draw = ImageDraw.Draw(card)
+
+    # A vertical wash, so the card is not a flat rectangle.
+    for y in range(height):
+        t = y / (height - 1)
+        draw.line([(0, y), (width, y)],
+                  fill=(round(26 - 10 * t), round(27 - 10 * t), round(38 - 14 * t), 255))
+
+    # A menu bar across the top, glyphs pushed right, exactly where macOS puts them.
+    bar_h, size, gap = 96, 52, 30
+    draw.rectangle([0, 0, width, bar_h], fill=BAR)
+    states = glyph_states(working=[API], waiting=[CHECKOUT])
+    glyphs = [glyph(key, color, fraction_for(state, 1.0), size)
+              for (key, color), state in zip(MOCK_ROW, states)]
+    x = width - sum(g.width for g in glyphs) - gap * (len(glyphs) - 1) - 48
+    for image in glyphs:
+        card.alpha_composite(image, (x, (bar_h - size) // 2))
+        x += image.width + gap
+
+    # Sits a little below the midpoint of the space under the bar: the glyph row carries
+    # visual weight up top, and centring on geometry alone reads as top-heavy.
+    body = bar_h + (height - bar_h) // 2 + 24
+    draw.text((width // 2, body - 46), "Agentique",
+              font=font(116, weight="Bold"), fill=TEXT, anchor="mm")
+    draw.text((width // 2, body + 62), "Every cmux agent, at a glance.",
+              font=font(46, weight="Medium"), fill=(122, 132, 173, 255), anchor="mm")
+
+    path = f"{OUT}/social-preview.png"
+    card.convert("RGB").save(path)
+    print(f"wrote {path} ({width}x{height}, {os.path.getsize(path) // 1024}KB)")
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
     make_pulse()
     make_click()
+    make_social()
 
 
 if __name__ == "__main__":

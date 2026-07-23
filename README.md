@@ -167,7 +167,7 @@ Supporting scripts, run from the repository root:
 ```sh
 uv run --with pillow python3 Tools/preview-glyphs.py   # every glyph at true menu bar size
 uv run --with pillow python3 Tools/preview-opacity.py  # compare resting-brightness candidates
-uv run --with pillow python3 Tools/make-demo.py        # regenerate docs/pulse.png and docs/click.png
+uv run --with pillow python3 Tools/make-demo.py        # regenerate everything under docs/
 swift Tools/rasterize.swift <in.svg|pdf> <out.png> <height>
 swift Tools/make-icon.swift                            # regenerate Assets/AppIcon.icns
 ```
@@ -175,11 +175,16 @@ swift Tools/make-icon.swift                            # regenerate Assets/AppIc
 `preview-glyphs.py` and `preview-opacity.py` write to `~/Desktop` and read the live row,
 so judge legibility on the actual-size render, not the magnified one.
 
+`docs/social-preview.png` is the card shown when this repository's URL is pasted into a
+chat app. GitHub only accepts it through **Settings → General → Social preview**, so
+regenerating it is not enough; it has to be re-uploaded by hand.
+
 ## License
 
 [MIT](LICENSE). An independent project, not affiliated with cmux.
 
-<br>
+---
+
 <p align="center">
-  <img src="docs/pulse.png" width="334" alt="A row of colored glyphs; two pulse while their agents work.">
+  <img src="docs/pulse.png" width="334" alt="">
 </p>
